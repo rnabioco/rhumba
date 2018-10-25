@@ -1,0 +1,66 @@
+# config for general RNA-seq quantification snakemake pipeline #
+
+# Use paired end settings or single end settings
+# Supply either "PE" for paired-end or "SE" for single end
+LIBTYPE:
+  "PE"
+
+# directory for data
+DATA: 
+  "../data"
+
+# directory for auxillary scripts
+SRC: 
+  "../src" 
+
+# directory for project specific databases
+DBASES: 
+  "../dbases" 
+
+GENOME:
+  "/beevol/home/riemondy/Projects/shared_dbases/genomes/GRCh38.primary_assembly.genome.fa"
+
+CHROM_SIZES:
+  "/beevol/home/riemondy/Projects/shared_dbases/genomes/GRCh38.primary_assembly.genome.fa.fai"
+
+TRANSCRIPTS:
+  "/beevol/home/riemondy/Projects/shared_dbases/annotation/gencode.v26.primary_assembly.annotation.gtf"
+
+TRANSCRIPTS_FA:
+  "/beevol/home/riemondy/Projects/shared_dbases/transcript_fastas/gencode.v26.transcripts.fa.gz"
+
+# path salmon index directory, will be generated if does not exist
+SALMON_IDX:
+  "/beevol/home/riemondy/Projects/shared_dbases/salmon_idx/gencode.v26.transcripts.idx"
+
+# path to star index directory, will be generated if does not exist
+STAR_IDX_DIR:
+  "/beevol/home/riemondy/Projects/shared_dbases/star/gencode_GRCh38"
+
+# parameters for various commands
+# Note that the first entry in fq_suffix is assumed to be read 1
+PE:
+    trim: " -m 20 -a 'TCGTATGCCGTCTTCTGCTT' "
+    salmon_quant: " --validateMappings --libType 'ISR' --numBootstraps 50 "
+    salmon_idx: " -k 31 --gencode "
+    featurecount: " --extraAttributes 'gene_name' -s 0 -p "
+    fq_suffix: 
+        - "_R1_001.fastq.gz"
+        - "_R2_001.fastq.gz"
+
+SE:
+    trim: " -m 20 -a 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC' "
+    salmon_quant: " --validateMappings --fldMean 200 --fldSD 20 --libType 'SR' --numBootstraps 50 "
+    salmon_idx: " -k 31 --gencode "
+    featurecount: " --extraAttributes 'gene_name' -s 0 "
+    fq_suffix: 
+        - "_R1_001.fastq.gz"
+
+# list of samples to process, defaults to anything in the
+# data/fastq/raw_data directory
+# supply the basename of the fastq except for the fq_suffix refion defined
+# in the PE or SE config 
+# i.e. to match expt1_S151_L003_R2_001.fastq.gz
+# supply expt1 to SAMPLES as a list
+SAMPLES:
+    ""

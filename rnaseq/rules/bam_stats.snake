@@ -1,0 +1,51 @@
+
+def _group_samples(wildcards):
+    input_files = expand("{projects}/hisat2/{samples}/{samples}_sorted.bam", 
+      samples=SAMPLES, projects=PROJECTS)
+    input_str = ",".join(input_files)
+    return input_str
+
+rule all_lib_stats:
+  output:
+    coverage = "{projects}/alignment_stats/gene_coverage.geneBodyCoverage.txt",
+  params:
+    bam = _group_samples,
+    outdir_coverage = "{projects}/alignment_stats/gene_coverage",
+    job_name = '{projects}.covstats',
+    memory =  "select[mem>80] rusage[mem=80] span[hosts=1]"
+  message:
+    "coverage stats"
+  shell:
+    """
+    module load python
+    
+    geneBody_coverage.py \
+      -i {params.bam} \
+      -r {TRANSCRIPTS_BED} \
+      -o {params.outdir_coverage}
+    module unload python
+    """
+
+rule single_lib_stats:
+  input:
+    bam = "{projects}/hisat2/{samples}/{samples}_sorted.bam"
+  output:
+    bam_stat = "{projects}/alignment_stats/{samples}/bam_stat.txt",
+    expt = "{projects}/alignment_stats/{samples}/lib_type.txt",
+    dist = "{projects}/alignment_stats/{samples}/read_dist.txt",
+  params:
+    nvc = "{projects}/alignment_stats/{samples}/nvc",
+    qual = "{projects}/alignment_stats/{samples}/qual",
+    job_name = '{projects}.libstats',
+    memory =  "select[mem>80] rusage[mem=80] span[hosts=1]"
+  message:
+    "getting alignment stats"
+  shell:
+    """
+    module load python
+    bam_stat.py -i {input.bam} -q 10 > {output.bam_stat}
+    infer_experiment.py -i {input.bam} -r {TRANSCRIPTS_BED} -q 10 > {output.expt}
+    read_distribution.py -i {input.bam} -r {TRANSCRIPTS_BED} > {output.dist}
+    read_NVC.py -i {input.bam} --nx -q 10 -o {params.nvc} 
+    module unload python
+    """

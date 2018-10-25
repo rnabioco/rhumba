@@ -1,0 +1,74 @@
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; ")
+
+from os import path
+from glob import glob
+from collections import OrderedDict
+import sys
+
+
+configfile: "config.yaml"
+  
+DATA = config["DATA"]
+SRC = config["SRC"]
+DBASES = config["DBASES"]
+TRANSCRIPTS = config["TRANSCRIPTS"]
+TRANSCRIPTS_FA = config["TRANSCRIPTS_FA"]
+GENOME = config["GENOME"]
+CHROM_SIZES = config["CHROM_SIZES"]
+STAR_IDX_DIR = config["STAR_IDX_DIR"]
+SALMON_IDX = config["SALMON_IDX"]
+SAMPLES = config["SAMPLES"]
+
+# set up library types
+if config["LIBTYPE"] == "PE":
+  PAIRED_END = True
+  CMD_PARAMS = config["PE"]
+elif config["LIBTYPE"] == "SE":
+  PAIRED_END = False
+  CMD_PARAMS = config["SE"]
+else:
+  sys.exit("LIBTYPE needs to be either 'PE' or 'SE'") 
+
+# find sample ids from fastqs if not in config
+if not SAMPLES:
+  SAMPLES = glob(path.join(DATA, "fastq",
+                    "raw_data",
+                    "*[gz|fastq|fq]"))
+
+
+  for fq_suffix in CMD_PARAMS["fq_suffix"]:
+    SAMPLES = [path.basename(x).replace(fq_suffix, "") for x in SAMPLES]
+
+  SAMPLES = list(set(SAMPLES))
+
+
+rule all:
+  input: 
+    expand("{data}/star/{sample}_Aligned.sortedByCoord.out.bam", 
+      data = DATA, sample=SAMPLES),
+    expand("{data}/salmon/{sample}/quant.sf", 
+      data = DATA, sample=SAMPLES),
+    expand("{data}/featurecounts/count_summary.tsv",
+      data = DATA),
+    expand("{data}/featurecounts/count_summary_degust_format.tsv",
+      data = DATA),
+
+    #### qc ####
+   # expand("{data}/qc/fastqc/{sample}_R1_fastqc/summary.txt",
+   #   data=DATA, sample = SAMPLE),
+   # expand("{data}/qc/rseqc/{sample}_{reports}.txt",
+   #   data=DATA, sample = SAMPLE, reports = ["bam_stat", "lib_type", "read_dist"]),
+
+    
+    #### bigwigs ####
+   # expand("{data}/bigwigs/{sample}_fwd.bw",
+   #   data=DATA, sample = SAMPLE),
+
+include: "rules/salmon.snake"
+include: "rules/trim.snake"
+include: "rules/star.snake"
+include: "rules/featurecounts.snake"
+#include: "rules/qc.snake"
+#include: "rules/make_bigwigs.snake"
+

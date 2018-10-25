@@ -1,0 +1,54 @@
+""" rules for basic QC checks """ 
+
+raw = path.join("{data}", "fastq", "raw_data")
+qc = path.join("{data}", "qc")
+
+rule fastqc:
+  input:
+    path.join(raw, "{sample}.fastq.gz"),
+  output:
+    path.join(qc, "fastqc", "{sample}_fastqc/summary.txt"),
+  params:
+    out_dir = path.join(qc, "fastqc"),
+    job_name = "fastqc.{sample}",
+    memory = "select[mem>16] rusage[mem=16]",
+  log:
+    path.join(qc, "logs", "fastqc", "{sample}.txt") 
+  message:
+    "fastqc analysis of {wildcards.sample} "
+  threads:
+    6 
+  resources: all_threads=6
+  shell:
+    """
+    mkdir -p {params.out_dir}
+    fastqc \
+      -t {threads} \
+      -f fastq \
+      -o {params.out_dir} \
+      {input} 
+    """
+
+rule single_lib_stats:
+  input:
+    bam = "{data}/star/{sample}_Aligned.sortedByCoord.out.bam"
+  output:
+    bam_stat = path.join(qc, "rseqc", "{sample}_bam_stat.txt"),
+    expt = path.join(qc, "rseqc", "{sample}_lib_type.txt"),
+    dist = path.join(qc, "rseqc", "{sample}_read_dist.txt"),
+  params:
+    job_name = '{sample}.libstats',
+    memory =  "select[mem>16] rusage[mem=16] span[hosts=1]"
+  message:
+    "getting alignment stats "
+  log:
+    path.join(qc, "logs", "rseqc", "{sample}.txt") 
+  resources: all_threads=1
+  shell:
+    """
+    module load python
+    bam_stat.py -i {input.bam} -q 10 > {output.bam_stat}
+    infer_experiment.py -i {input.bam} -r {TRANSCRIPTS_BED} -q 10 > {output.expt}
+    read_distribution.py -i {input.bam} -r {TRANSCRIPTS_BED} > {output.dist}
+    module unload python
+    """

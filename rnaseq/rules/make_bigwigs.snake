@@ -1,0 +1,34 @@
+
+""" rules to generate bigwigs """
+
+
+rule make_bigwigs:
+  input:
+    {CHROM_SIZES},
+    forward = "{data}/star/{sample}_Signal.Unique.str2.out.bg",
+    reverse = "{data}/star/{sample}_Signal.Unique.str1.out.bg",
+  output:
+    fwd = "{data}/bigwigs/{sample}_fwd.bw",
+    rev = "{data}/bigwigs/{sample}_rev.bw",
+    revneg = "{data}/bigwigs/{sample}_rev_neg.bw",
+  params:
+    job_name = "bigwig.{sample}",
+    memory = "select[mem>4] rusage[mem=4]",
+  log:
+    "{data}/bigwigs/logs/{sample}.txt" 
+  message:
+    "building bigwigs for {wildcards.sample} "
+  resources: all_threads=1
+  shell:
+    """
+    bedSort {input.forward} {input.forward}.sort
+    bedSort {input.reverse} {input.reverse}.sort
+
+    bedGraphToBigWig {input.forward}.sort {CHROM_SIZES} {output.fwd}
+    bedGraphToBigWig {input.reverse}.sort {CHROM_SIZES} {output.rev}
+    awk '{{$4=$4*-1; print}}' {input.reverse}.sort > {input.reverse}.tmp
+    
+    bedGraphToBigWig {input.reverse}.tmp {CHROM_SIZES} {output.revneg}
+
+    rm {input.reverse}.tmp {input.forward}.sort {input.reverse}.sort
+    """

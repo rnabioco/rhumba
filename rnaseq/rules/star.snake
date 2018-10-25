@@ -1,0 +1,114 @@
+
+""" rules for star mapping """
+
+def _star_fqs(wildcards):
+  """ 
+    generate fastq names 
+  """
+
+  if PAIRED_END: 
+    fq_names = [path.join(wildcards.data,
+                        "fastq",
+                        "trimmed",
+                         wildcards.sample + "_" + x + "_trimmed.fastq.gz") for
+                         x in ["R1", "R2"]]
+  else:
+    fq_names = [path.join(wildcards.data,
+                          "fastq",
+                          "trimmed",
+                          wildcards.sample + "_trimmed.fastq.gz")]
+  return fq_names
+
+def _star_fq_input(wildcards):
+  """ build command line options for salmon """
+  fqs = _star_fqs(wildcards)
+  
+  return " ".join(fqs)
+
+
+rule star_align:
+    """ map reads to genome/transcriptome using STAR 
+    2.5.2a STAR
+    """
+    input:
+      reads = _star_fqs,
+      genome = path.join(STAR_IDX_DIR, "Genome"),
+      gtf = TRANSCRIPTS
+    output:
+      bam = "{data}/star/{sample}_Aligned.sortedByCoord.out.bam",
+      bg1 = "{data}/star/{sample}_Signal.UniqueMultiple.str1.out.bg",
+      bg2 = "{data}/star/{sample}_Signal.UniqueMultiple.str2.out.bg"
+    params:
+      reads = _star_fq_input,
+      job_name = "star",
+      out = "{data}/star/{sample}_",
+      memory = "select[mem>45] rusage[mem=45]",
+    log:
+      path.join("logs", "star", "{sample}_align.txt")
+    message:
+      "running star alignments "
+    threads:
+      12
+    resources: all_threads=12
+    shell:
+      """
+      STAR \
+        --genomeDir {STAR_IDX_DIR}  \
+        --runThreadN {threads} \
+        --outBAMsortingThreadN {threads} \
+        --readFilesIn {input.reads} \
+        --sjdbGTFfile {input.gtf} \
+        --readFilesCommand gunzip -c \
+        --outFileNamePrefix {params.out} \
+        --outFilterMultimapNmax 10 \
+        --outFilterMismatchNmax 10 \
+        --outFilterMismatchNoverReadLmax 0.04 \
+        --outSAMmultNmax 1 \
+        --outMultimapperOrder Random \
+        --outSAMprimaryFlag AllBestScore \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignMatesGapMax 1000000 \
+        --alignSJoverhangMin 8  \
+        --alignSJDBoverhangMin 1 \
+        --sjdbScore 1 \
+        --outFilterType Normal \
+        --outSAMtype BAM SortedByCoordinate \
+        --outSAMmode Full \
+        --limitSjdbInsertNsj=1500000 \
+        --outSAMattributes All  \
+        --outSAMattrIHstart 0  \
+        --outSAMstrandField intronMotif \
+        --outWigType bedGraph  \
+        --outWigNorm RPM 
+
+      samtools index {output.bam}
+      """
+
+""" rules to generate STAR indicies """
+
+rule star_idx:
+  input:
+    GENOME
+  output:
+    path.join(STAR_IDX_DIR, "Genome")
+  params:
+    job_name = "star_idx",
+    memory = "select[mem>65] rusage[mem=65]",
+  log:
+    path.join(STAR_IDX_DIR, "logs") 
+  message:
+    "building star index "
+  threads:
+    24
+  resources: all_threads = 24
+  shell:
+    """
+    STAR --runMode genomeGenerate \
+      --genomeDir {STAR_IDX_DIR}  \
+      --genomeFastaFiles {GENOME} \
+      --runThreadN {threads} \
+      --limitGenomeGenerateRAM 60000000000
+    """
+
+

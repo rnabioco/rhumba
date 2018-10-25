@@ -1,0 +1,73 @@
+
+''' rules to count reads overlapping genes '''
+
+rule featurecount:
+  input:
+    bams = expand(path.join("{data}", 
+      "star",
+      "{sample}_Aligned.sortedByCoord.out.bam"),
+        data = DATA, 
+        sample = SAMPLES)
+  output:
+    path.join("{data}", 
+      "featurecounts",
+      "count_summary.tsv")
+  params:
+    count = CMD_PARAMS["featurecount"],
+    job_name = "bamcount",
+    memory = "select[mem>8] rusage[mem=8]",
+    annots = TRANSCRIPTS 
+  log:
+    path.join("logs", "featurecounts", "fc_summary.txt")
+  threads: 12
+  resources: all_threads=12
+  shell:
+    """
+    featureCounts \
+     {params.count} \
+    -F 'GTF' \
+    -a {params.annots} \
+    -o {output} \
+    -T {threads} \
+    {input.bams}
+    """
+
+rule format_featurecounts_for_degust:
+  """ remove head and rename colnames for easy loading into degust """
+
+  input: 
+    path.join("{data}", "featurecounts", "count_summary.tsv")
+  output:
+    path.join("{data}", "featurecounts", "count_summary_degust_format.tsv")
+  params:
+    job_name = "{data}.fCount",
+    memory = "select[mem>2] rusage[mem=2]",
+  log:
+    path.join("logs", "all_libs_format_for_degust.txt")
+  run:
+    out = open(output[0], "w")
+    with open(input.fc, 'r') as f:     
+      # header
+      header = f.readline()
+      
+      # colnames
+      cols = f.readline()
+      cols = cols.split("\t") 
+      
+      renamed_cols = []
+      for column in cols:
+        if "_Aligned.sortedByCoord.out.bam" in column:
+          bam_id = os.path.basename(column)
+          sample_id = bam_id.replace("_Aligned.sortedByCoord.out.bam", "")
+          renamed_cols.append(sample_id)
+        else:
+          renamed_cols.append(column)
+      
+      out.write("%s\n" % "\t".join(renamed_cols))
+
+      for line in f:
+          # write the rest of the lines of data
+          out.write("%s" % line)
+
+    out.close() 
+

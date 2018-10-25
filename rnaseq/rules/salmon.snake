@@ -1,0 +1,93 @@
+""" rules for psuedo alignment via salmon """
+
+def _salmon_fqs(wildcards):
+  """ 
+    generate fastq names 
+  """
+
+  if PAIRED_END: 
+    fq_names = [path.join(wildcards.data,
+                        "fastq",
+                        "trimmed",
+                         wildcards.sample + "_" + x + "_trimmed.fastq.gz") for
+                         x in ["R1", "R2"]]
+  else:
+    fq_names = [path.join(wildcards.data,
+                          "fastq",
+                          "trimmed",
+                          wildcards.sample + "_trimmed.fastq.gz")]
+  return fq_names
+
+def _salmon_fq_input(wildcards):
+  """ build command line options for salmon """
+  fqs = _salmon_fqs(wildcards)
+  
+  if len(fqs) == 1:
+      io_option = " -r {fq[0]} ".format(fq = fqs)
+  elif len(fqs) > 1:
+      io_option = " -1 {fq[0]} -2 {fq[1]} ".format(fq = fqs)
+  else:
+      sys.exit("no fastq suffixes found for library:{}".format(wildcards.sample))
+  return io_option
+
+rule salmon_quant:
+    """
+    run salmon quant
+    Salmon v0.11.2
+    """
+    input:
+      idx = path.join(SALMON_IDX, "hash.bin"),
+      fqs = _salmon_fqs,
+      gtf = TRANSCRIPTS 
+    output:
+      path.join("{data}", "salmon", "{sample}", "quant.sf")
+    params:
+      io = _salmon_fq_input,
+      settings = CMD_PARAMS["salmon_quant"],
+      idx = SALMON_IDX,
+      out_dir = path.join("{data}", "salmon", "{sample}"),
+      job_name = "salmon_fishin",
+      memory = "select[mem>30] rusage[mem=30]",
+    log:
+      path.join("logs", "salmon", "{sample}")
+    threads: 12
+    resources: all_threads=12
+    message: "quantifying with salmon"
+    shell:
+      """
+      salmon quant \
+        -i {params.idx} \
+        {params.settings} \
+        {params.io} \
+        -o {params.out_dir} \
+        -p {threads} \
+        -g {input.gtf}
+      """
+
+rule salmon_idx:
+    """
+    build salmon on pre-mRNA fasta
+    Salmon v0.11.2
+    """
+    input:
+      fasta = TRANSCRIPTS_FA 
+    output:
+      path.join(SALMON_IDX, "hash.bin")
+    params:
+      outname = SALMON_IDX, 
+      idx_params = CMD_PARAMS["salmon_idx"],
+      job_name = "salmon_idx",
+      memory = "select[mem>50] rusage[mem=50]",
+    log:
+      path.join("logs", "salmon_index", "generate_salmon_index.txt")
+    threads: 12
+    resources: all_threads=12
+    message: "building salmon index "
+    shell:
+      """
+      salmon index \
+        -t {input.fasta} \
+        -i {params.outname} \
+        -p {threads} \
+        {params.idx_params} 
+      """

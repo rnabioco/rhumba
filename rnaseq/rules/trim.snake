@@ -1,0 +1,74 @@
+
+def _fq_types(wildcards):
+  """ 
+    generate fastq names 
+  """
+
+  fq_suffixes = CMD_PARAMS["fq_suffix"]
+  fq_names = [path.join(wildcards.data,
+                        "fastq",
+                        "raw_data",
+                         wildcards.sample + x ) for
+                         x in fq_suffixes]
+  return fq_names
+
+rule cutadapt_single:
+  input:
+    _fq_types, 
+  output:
+    path.join("{data}", "fastq", "trimmed", 
+      "{sample}_trimmed.fastq.gz")
+  params:
+    settings = CMD_PARAMS["trim"],
+    job_name = "trim.{sample}",
+    memory = "select[mem>4] rusage[mem=4]",
+  log:
+    path.join("logs", "cutadapt", "{sample}.txt") 
+  message:
+    " trimming illumina adapters" 
+  threads: 1
+  resources: all_threads=1
+  run:
+    if len(params.settings) is 0:
+      # just make a symlink to the og fastq, no need to process
+      os.symlink(input[0], output[0])
+    else:
+      shell("""
+        cutadapt \
+        {params.settings} \
+        -o {output} \
+        {input[0]} 
+        """)
+
+rule cutadapt_paired:
+  input:
+    _fq_types, 
+  output:
+    path.join("{data}", "fastq", "trimmed", 
+    "{sample}_R1_trimmed.fastq.gz"), 
+    path.join("{data}", "fastq", "trimmed", 
+    "{sample}_R2_trimmed.fastq.gz") 
+  params:
+    settings = CMD_PARAMS["trim"],
+    job_name = "trim.{sample}",
+    memory = "select[mem>4] rusage[mem=4]",
+  log:
+    path.join("logs", "cutadapt", "{sample}.txt") 
+  message:
+    " trimming illumina adapters" 
+  threads: 1
+  resources: all_threads=1
+  run:
+    if len(params.settings) is 0:
+      # just make a symlink to the og fastq, no need to process
+      os.symlink(input[0], output[0])
+      os.symlink(input[1], output[1])
+    else:
+      shell("""
+        cutadapt \
+        {params.settings} \
+        -o {output[0]} \
+        -p {output[1]} \
+        {input[0]}  \
+        {input[1]}
+        """)
