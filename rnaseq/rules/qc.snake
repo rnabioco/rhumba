@@ -13,7 +13,7 @@ rule fastqc:
     job_name = "fastqc.{sample}",
     memory = "select[mem>16] rusage[mem=16]",
   log:
-    path.join(qc, "logs", "fastqc", "{sample}.txt") 
+    path.join("logs", "fastqc", "{sample}.txt") 
   message:
     "fastqc analysis of {wildcards.sample} "
   threads:
@@ -29,6 +29,41 @@ rule fastqc:
       {input} 
     """
 
+def _group_samples(wildcards):
+    input_files = expand("{data}/star/{sample}_Aligned.sortedByCoord.out.bam", 
+      data = DATA, sample=SAMPLES)
+    input_str = ",".join(input_files)
+    return input_str
+
+rule gene_coverage:
+  input:
+    expand("{data}/star/{sample}_Aligned.sortedByCoord.out.bam",
+      data = DATA,
+      sample = SAMPLES) 
+  output:
+    path.join(qc, "rseqc", "all_samples.geneBodyCoverage.txt")
+  params:
+    bams = _group_samples,
+    outname = path.join(qc, "rseqc", "all_samples"),
+    job_name = 'bam.libstats',
+    memory =  "select[mem>16] rusage[mem=16] "
+  message:
+    "getting alignment stats "
+  log:
+    path.join("logs", "rseqc", "coveage.txt") 
+  resources: all_threads=1
+  shell:
+    """
+    geneBody_coverage.py \
+      -i {params.bams} \
+      -r {TRANSCRIPTS_BED} \
+      -l 100 \
+      -f "pdf" \
+      -o {params.outname}
+
+    """
+
+
 rule single_lib_stats:
   input:
     bam = "{data}/star/{sample}_Aligned.sortedByCoord.out.bam"
@@ -38,17 +73,15 @@ rule single_lib_stats:
     dist = path.join(qc, "rseqc", "{sample}_read_dist.txt"),
   params:
     job_name = '{sample}.libstats',
-    memory =  "select[mem>16] rusage[mem=16] span[hosts=1]"
+    memory =  "select[mem>16] rusage[mem=16] "
   message:
     "getting alignment stats "
   log:
-    path.join(qc, "logs", "rseqc", "{sample}.txt") 
+    path.join("logs", "rseqc", "{sample}.txt") 
   resources: all_threads=1
   shell:
     """
-    module load python
     bam_stat.py -i {input.bam} -q 10 > {output.bam_stat}
-    infer_experiment.py -i {input.bam} -r {TRANSCRIPTS_BED} -q 10 > {output.expt}
+    infer_experiment.py -q 10 -i {input.bam} -r {TRANSCRIPTS_BED} -q 10 > {output.expt}
     read_distribution.py -i {input.bam} -r {TRANSCRIPTS_BED} > {output.dist}
-    module unload python
     """

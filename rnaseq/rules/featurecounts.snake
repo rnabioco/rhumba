@@ -43,15 +43,15 @@ rule format_featurecounts_for_degust:
     job_name = "{data}.fCount",
     memory = "select[mem>2] rusage[mem=2]",
   log:
-    path.join("logs", "all_libs_format_for_degust.txt")
+    path.join("logs", "featurecounts", "all_libs_format_for_degust.txt")
   run:
     out = open(output[0], "w")
-    with open(input.fc, 'r') as f:     
+    with open(input[0], 'r') as f:     
       # header
       header = f.readline()
       
       # colnames
-      cols = f.readline()
+      cols = f.readline().rstrip()
       cols = cols.split("\t") 
       
       renamed_cols = []

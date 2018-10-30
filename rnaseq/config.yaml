@@ -26,6 +26,9 @@ CHROM_SIZES:
 TRANSCRIPTS:
   "/beevol/home/riemondy/Projects/shared_dbases/annotation/gencode.v26.primary_assembly.annotation.gtf"
 
+TRANSCRIPTS_BED:
+  "/beevol/home/riemondy/Projects/shared_dbases/annotation/gencode.v26.primary_assembly.annotation.bed"
+
 TRANSCRIPTS_FA:
   "/beevol/home/riemondy/Projects/shared_dbases/transcript_fastas/gencode.v26.transcripts.fa.gz"
 

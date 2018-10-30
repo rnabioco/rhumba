@@ -20,7 +20,7 @@ def _star_fqs(wildcards):
   return fq_names
 
 def _star_fq_input(wildcards):
-  """ build command line options for salmon """
+  """ build command line options for star """
   fqs = _star_fqs(wildcards)
   
   return " ".join(fqs)

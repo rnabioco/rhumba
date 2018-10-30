@@ -26,7 +26,7 @@ args='
 module load modules modules-init modules-python
 
 #module load ucsc/v308 
-#module load fastqc/0.10.1
+module load fastqc/0.11.7
 module load samtools/1.5
 module load STAR/2.5.2a
 module load subread 

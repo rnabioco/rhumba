@@ -13,6 +13,7 @@ DATA = config["DATA"]
 SRC = config["SRC"]
 DBASES = config["DBASES"]
 TRANSCRIPTS = config["TRANSCRIPTS"]
+TRANSCRIPTS_BED = config["TRANSCRIPTS_BED"]
 TRANSCRIPTS_FA = config["TRANSCRIPTS_FA"]
 GENOME = config["GENOME"]
 CHROM_SIZES = config["CHROM_SIZES"]
@@ -42,7 +43,6 @@ if not SAMPLES:
 
   SAMPLES = list(set(SAMPLES))
 
-
 rule all:
   input: 
     expand("{data}/star/{sample}_Aligned.sortedByCoord.out.bam", 
@@ -55,10 +55,14 @@ rule all:
       data = DATA),
 
     #### qc ####
-   # expand("{data}/qc/fastqc/{sample}_R1_fastqc/summary.txt",
-   #   data=DATA, sample = SAMPLE),
-   # expand("{data}/qc/rseqc/{sample}_{reports}.txt",
-   #   data=DATA, sample = SAMPLE, reports = ["bam_stat", "lib_type", "read_dist"]),
+    expand("{data}/qc/fastqc/{sample}{read}_fastqc/summary.txt",
+      data=DATA, sample = SAMPLES, 
+      read = [x.split(".")[0] for x in CMD_PARAMS["fq_suffix"]]),
+    expand("{data}/qc/rseqc/{sample}_{reports}.txt",
+      data=DATA, sample = SAMPLES, 
+      reports = ["bam_stat", "lib_type", "read_dist" ]),
+    path.join(DATA, "qc", "rseqc",
+    "all_samples.geneBodyCoverage.txt"),
 
     
     #### bigwigs ####
@@ -69,6 +73,6 @@ include: "rules/salmon.snake"
 include: "rules/trim.snake"
 include: "rules/star.snake"
 include: "rules/featurecounts.snake"
-#include: "rules/qc.snake"
+include: "rules/qc.snake"
 #include: "rules/make_bigwigs.snake"
 
