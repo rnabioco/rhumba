@@ -1,0 +1,20 @@
+# config file for running 10x pipeline 
+
+DATA:
+    "../runs/tmp"
+
+PROJECT:
+    "Example"
+
+TRANSCRIPTOME:
+    "Projects/shared_dbases/cell_ranger/refdata-cellranger-mm10-1.2.0"
+
+SAMPLES:
+    - Sample_1
+    - Sample_2 
+
+EXPT_GROUPS:
+    - Sample_1,Sample_2 
+
+MAX_10X_JOBS:
+    12
