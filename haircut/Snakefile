@@ -1,0 +1,32 @@
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; ")
+import os 
+
+""" Snakefile for running 10x pipeline """
+# cellranger directory added to .bashrc 
+
+configfile: "config.yaml"
+
+HAIRCUT_DATA = config["HAIRCUT_DATA"]
+DATA = config["DATA"]
+SAMPLES = config["HAIRCUT_SAMPLES"]
+HAIRCUT_FASTA = config["HAIRCUT_FASTA"]
+SRC = config["SRC"]
+
+rule all:
+    input:
+      #expand("{data}/results/logs/{sample}_complete.txt", data = DATA,
+      #  sample = SAMPLES),
+      #expand("{data}/results/logs/{expt_groups}_aggr_complete.out.txt", 
+      #  data = DATA, expt_groups = EXPT_GROUPS),
+      expand("{data}/fastqs/{sample}_{read_id}_umi.fastq.gz",
+        data = DATA, sample = SAMPLES, read_id = ["R1", "R2"]),
+
+      expand(os.path.join("{data}", "counts",
+      "{sample}_umitools_counts.tsv.gz"),
+        data = DATA, sample = SAMPLES)
+        
+#include: "rules/10x_3pcount.snake"
+include: "rules/haircut_count.snake"
+#include: "rules/align.snake"
+#include: "rules/format_matrix.snake"

@@ -1,0 +1,18 @@
+# config file for processing functional count data 
+
+HAIRCUT_DATA:
+    # path to input raw haircut fastqs
+    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/haircut"
+DATA:
+    # path to output data files
+    "../data/"
+
+HAIRCUT_FASTA:
+    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/dbases/genome/hairpin.fa"
+
+HAIRCUT_SAMPLES:
+    - JH134_2 
+
+SRC:
+    # path to directory with source code (i.e. add_gene_tag.py)"
+    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/src"

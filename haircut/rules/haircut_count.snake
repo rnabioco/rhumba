@@ -1,0 +1,218 @@
+""" Snakerules for counting haircut single cell data """ 
+import os
+import glob
+
+def get_read_id(fq_path):
+    
+    fq = os.path.basename(fq_path)
+    fq = fq.replace("_001.fastq.gz", "")
+    read_id = fq[-2:]
+    return read_id
+
+def _get_fastqs(wildcards):
+
+    data_dir = HAIRCUT_DATA
+    fqs = glob.glob(os.path.join(data_dir, wildcards.sample) + "*.gz")
+    
+    if len(fqs) == 0:
+        sys.exit("fastqs could not be found in directory {}".format(data_dir))
+    
+    path_to_fqs = [os.path.join(data_dir, x) for x in fqs]
+
+    
+    if len(path_to_fqs) > 2:
+        sys.exit("More than 2 fastqs found for sample {}".format(wildcards.sample))
+     
+    fq_order = ["R1", "R2"]
+    
+    # sort to ensure that read 1 is first in list
+    path_to_fqs = sorted(path_to_fqs, key=lambda k: fq_order.index(get_read_id(k)))
+    
+    print("input fastq\tsample", file = sys.stderr) 
+    for fq in path_to_fqs:
+      print("{}\t{}".format(fq, wildcards.sample), file = sys.stderr)
+    
+    return path_to_fqs
+
+rule extract_umi_barcode:
+    """
+    extract umi and cell barcode from read 1 
+    """
+    input:
+      _get_fastqs
+    output:
+      R1 = "{data}/fastqs/{sample}_R1_umi.fastq.gz",
+      R2 = "{data}/fastqs/{sample}_R2_umi.fastq.gz" 
+    params:
+      bc_pattern = "CCCCCCCCCCCCCCCCNNNNNNNNNN",
+      job_name = "{sample}.get_umi",
+      memory = "select[mem>4] rusage[mem=4]",
+    log: "logs/extract_umi/{sample}.out"
+    threads: 2 # for gzip
+    resources: all_threads=2
+    shell:
+      """
+      umi_tools extract \
+        --bc-pattern {params.bc_pattern} \
+        --stdin {input[0]} \
+        --stdout {output.R1} \
+        --read2-in {input[1]} \
+        --read2-out={output.R2}
+      """ 
+
+rule trim:
+    """
+    trim tso and polyA
+    """
+    input:
+      "{data}/fastqs/{sample}_R2_umi.fastq.gz"
+    output:
+      "{data}/fastqs/{sample}_R2_umi_trimmed.fastq.gz"
+    params:
+      adapter3p = " -a AAAAAAAAAAA ",
+      adapter5p = " -g AAGCAGTGGTATCAACGCAGAGTACATGGG ",
+      other_options = " --minimum-length=2 ",
+      job_name = "{sample}.trim",
+      memory = "select[mem>4] rusage[mem=4]",
+    log: "logs/trim/{sample}.out"
+    threads: 2 # for gzip
+    resources: all_threads=2
+    shell:
+      """
+      cutadapt \
+        {params.adapter3p} \
+        {params.adapter5p} \
+        {params.other_options} \
+        -o {output} \
+        {input}
+      """
+
+rule bowtie_align:
+    """
+    run bowtie2 on masked transcriptome 
+    """
+    input:
+      idx = HAIRCUT_FASTA.rsplit('.', 1)[0] + ".1.bt2",
+      R1 = "{data}/fastqs/{sample}_R2_umi_trimmed.fastq.gz",
+    output:
+      bam = os.path.join("{data}", "bam", "{sample}_haircut.bam")
+    params:
+      settings = " --norc ",
+      idx = HAIRCUT_FASTA.rsplit('.', 1)[0], 
+      job_name = "{sample}.bt2",
+      memory = "select[mem>30] rusage[mem=30]",
+    log:
+      os.path.join("logs", "bowtie2_align", "{sample}")
+    threads: 12
+    resources: all_threads=12
+    shell:
+      """
+        bowtie2 \
+          -x {params.idx} \
+          --threads {threads} \
+          {params.settings} \
+          {input.R1} \
+          | samtools view -bS \
+          | samtools sort -@ 11 \
+          > {output.bam}  
+
+      """
+
+rule bowtie_idx:
+    """
+    build bowtie2 index
+    """
+    input:
+      HAIRCUT_FASTA
+    output:
+      HAIRCUT_FASTA.rsplit('.', 1)[0] + ".1.bt2"
+    params:
+      idx = HAIRCUT_FASTA.rsplit('.', 1)[0], 
+      job_name = "bt2_idx",
+      memory = "select[mem>30] rusage[mem=30]",
+    log:
+      os.path.join("logs", "bowtie2_index", "log.txt")
+    threads: 12
+    resources: all_threads=12
+    shell:
+      """
+      bowtie2-build \
+        --threads {threads} \
+        {input} \
+        {params.idx} 
+      """
+
+rule append_tag:
+    """
+    add XT tag with chrom + pos
+    """
+    input:
+      bam = os.path.join("{data}", "bam", "{sample}_haircut.bam")
+    output:
+      bam = os.path.join("{data}", "bam", "{sample}_haircut_tagged.bam")
+    params:
+      job_name = "{sample}.tag",
+      memory = "select[mem>4] rusage[mem=4]",
+    log:
+      os.path.join("logs", "tag_sample", "{sample}")
+    threads: 1
+    resources: all_threads=1
+    shell:
+      """
+      python {SRC}/add_gene_tag.py {input} {output}
+      
+      samtools index {output}
+      """
+
+rule count_umis:
+    """
+    count up umis
+    """
+    input:
+      bam = os.path.join("{data}", "bam", "{sample}_haircut_tagged.bam")
+    output:
+      os.path.join("{data}", "counts", "{sample}_umitools_counts.tsv.gz")
+    params:
+      job_name = "{sample}.count",
+      memory = "select[mem>16] rusage[mem=16]",
+    log:
+      os.path.join("logs", "count_sample", "{sample}")
+    threads: 2
+    resources: all_threads=2
+    shell:
+      """
+     umi_tools count \
+       --per-gene \
+       --gene-tag=XT \
+       --per-cell \
+       --wide-format-cell-counts \
+       -I {input} \ 
+       -S {output} 
+      """
+
+
+#rule make_mtx_format:
+#    """
+#    count up umis
+#    """
+#    input:
+#      bam = os.path.join("{data}", "bam", "{sample}_haircut_tagged.bam")
+#    output:
+#      os.path.join("{data}", "counts", "{sample}_umitools_counts.tsv.gz")
+#    params:
+#      job_name = "{sample}.count",
+#      memory = "select[mem>16] rusage[mem=16]",
+#    log:
+#      os.path.join("logs", "count_sample", "{sample}")
+#    threads: 2
+#    resources: all_threads=2
+#    shell:
+#      """
+#     umi_tools count \
+#       --per-gene \
+#       --gene-tag=XT \
+#       --per-cell \
+#       -I {input} \ 
+#       -S {output} 
+#      """
+
