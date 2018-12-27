@@ -5,7 +5,7 @@ HAIRCUT_DATA:
     "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/haircut"
 DATA:
     # path to output data files
-    "../data/"
+    "../data"
 
 HAIRCUT_FASTA:
     "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/dbases/genome/hairpin.fa"
@@ -14,5 +14,5 @@ HAIRCUT_SAMPLES:
     - JH134_2 
 
 SRC:
-    # path to directory with source code (i.e. add_gene_tag.py)"
-    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/src"
+    # path to directory with source code " 
+    "../src"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#BSUB -J RNAseek 
+#BSUB -J haircut 
 #BSUB -o logs/snakemake_%J.out
 #BSUB -e logs/snakemake_%J.err
 #BSUB -R "select[mem>4] rusage[mem=4] " 
@@ -24,11 +24,9 @@ args='
 # load modules
 . /usr/share/Modules/init/bash
 module load modules modules-init modules-python
-
-#module load ucsc/v308 
-module load fastqc/0.11.7
 module load samtools/1.5
 module load bowtie2/2.3.2
+module load R/3.5.0
 
 # other programs (not in modules)
 # umi_tools 
