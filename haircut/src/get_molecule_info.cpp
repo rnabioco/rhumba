@@ -49,9 +49,9 @@ void get_molecules(std::string filename, std::string path){
       current_cell = molecule.cb ;
     }
     
-    // add to maps if key is unique
-    txmap.emplace(molecule.xt, txmap.size());    
-    bcmap.emplace(molecule.cb, bcmap.size());    
+    // add to maps if key is unique, storing one-based index
+    txmap.emplace(molecule.xt, txmap.size() + 1);    
+    bcmap.emplace(molecule.cb, bcmap.size() + 1);    
     
 
     // use 2bit umi and txmap index as key value
@@ -86,7 +86,7 @@ void get_molecules(std::string filename, std::string path){
               });
   
   for(auto bc:bcs) {
-    bcfile << bc.first << "\t" << bc.second << std::endl ;
+    bcfile << bc.first << std::endl ;
   }
 
   bcfile.close() ;
@@ -104,7 +104,7 @@ void get_molecules(std::string filename, std::string path){
               });
   
   for(auto f:flist) {
-    featurefile << f.first << "\t" << f.second << std::endl ;
+    featurefile << f.first << std::endl ;
   }
   
   featurefile.close();

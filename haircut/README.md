@@ -55,6 +55,12 @@ cd src
 make  
 ```
 
+On Macos it may be necessary to specify `clang` as the compiler.
+
+```bash
+make CC=clang CXX=clang++
+```
+
 Lastly, the `snakecharmer.sh` script is a BSUB submission script that initiates the
 snakemake executable. Edit the `.sh` script as necessary to ensure that
 the listed programs are in the path.
