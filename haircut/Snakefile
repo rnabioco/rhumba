@@ -29,14 +29,14 @@ rule all:
         "{sample}", "{outfiles}"),
          data = DATA, sample = SAMPLES, 
          outfiles = ["molecules.tsv.gz", 
-           "features.tsv", 
-           "barcodes.tsv"]),
+           "features.tsv.gz", 
+           "barcodes.tsv.gz"]),
     
       expand(os.path.join("{data}", "counts",
         "{sample}_mtx", "{outfiles}"),
          data = DATA, sample = SAMPLES, 
          outfiles = ["matrix.mtx.gz", 
-           "features.tsv", 
-           "barcodes.tsv"]),
+           "features.tsv.gz", 
+           "barcodes.tsv.gz"]),
 
 include: "rules/haircut_count.snake"

@@ -251,8 +251,8 @@ rule make_mtx_format:
     os.path.join("{data}", "counts", "{sample}_umitools_counts.tsv.gz")
   output:
     os.path.join("{data}", "counts", "{sample}_mtx", "matrix.mtx.gz"),
-    os.path.join("{data}", "counts", "{sample}_mtx", "features.tsv"),
-    os.path.join("{data}", "counts", "{sample}_mtx", "barcodes.tsv"),
+    os.path.join("{data}", "counts", "{sample}_mtx", "features.tsv.gz"),
+    os.path.join("{data}", "counts", "{sample}_mtx", "barcodes.tsv.gz"),
   params:
     outdir = os.path.join("{data}", "counts", "{sample}_mtx"),
     job_name = "{sample}.convert",
@@ -274,11 +274,13 @@ rule make_molecule_files:
     bam = os.path.join("{data}", "bam", "{sample}_haircut_umitagged_sorted.bam")
   output:
     os.path.join("{data}", "molecules", "{sample}", "molecules.tsv.gz"),
-    os.path.join("{data}", "molecules", "{sample}", "features.tsv"),
-    os.path.join("{data}", "molecules", "{sample}", "barcodes.tsv"),
+    os.path.join("{data}", "molecules", "{sample}", "features.tsv.gz"),
+    os.path.join("{data}", "molecules", "{sample}", "barcodes.tsv.gz"),
   params:
     outdir = os.path.join("{data}", "molecules", "{sample}"),
-    tmpfile = os.path.join("{data}", "molecules", "{sample}", "molecules.tsv"),
+    tmpmat = os.path.join("{data}", "molecules", "{sample}", "molecules.tsv"),
+    tmpfeatures = os.path.join("{data}", "molecules", "{sample}", "features.tsv"),
+    tmpbarcodes = os.path.join("{data}", "molecules", "{sample}", "barcodes.tsv"),
     job_name = "{sample}.convert",
     memory = "select[mem>16] rusage[mem=16]",
   log:
@@ -288,6 +290,7 @@ rule make_molecule_files:
   shell:
     """
     {SRC}/get_molecule_info {input.bam} {params.outdir}
-    gzip {params.tmpfile}
-
+    gzip {params.tmpmat}
+    gzip {params.tmpfeatures}
+    gzip {params.tmpbarcodes}
     """
