@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
     }
 
     std::string id = bam_get_qname(aln) ; //get name
-    auto pos = std::to_string((aln)->core.pos) ; // chrom position
+    auto pos_zero = (aln)->core.pos ;
+    auto pos_one  = pos_zero + 1 ;
+    auto pos = std::to_string(pos_one) ; // chrom position as one-based
     auto chrom = std::string(header->target_name[(aln)->core.tid]) ;
     auto xt_info = chrom + '_' + pos ; 
             
