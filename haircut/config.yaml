@@ -3,6 +3,10 @@
 HAIRCUT_DATA:
     # path to input raw haircut fastqs
     "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/haircut"
+
+10X_DATA:
+    # path to input raw haircut fastqs
+    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/mrna"
 DATA:
     # path to output data files
     "../data"
@@ -13,6 +17,15 @@ HAIRCUT_FASTA:
 HAIRCUT_SAMPLES:
     - JH134_2 
 
+10X_SAMPLES:
+    - JH133 
+
+10X_REF:
+    "/beevol/home/riemondy/Projects/shared_dbases/cell_ranger/refdata-cellranger-GRCh38-3.0.0"
+
 SRC:
     # path to directory with source code " 
     "../src"
+
+MAX_10X_JOBS:
+    18

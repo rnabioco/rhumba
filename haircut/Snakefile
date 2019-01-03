@@ -7,36 +7,55 @@ import os
 configfile: "config.yaml"
 
 HAIRCUT_DATA = config["HAIRCUT_DATA"]
+MRNA_DATA = config["10X_DATA"]
 DATA = config["DATA"]
-SAMPLES = config["HAIRCUT_SAMPLES"]
+HC_SAMPLES = config["HAIRCUT_SAMPLES"]
+MRNA_SAMPLES = config["10X_SAMPLES"]
 HAIRCUT_FASTA = config["HAIRCUT_FASTA"]
+MRNA_REF = config["10X_REF"]
 SRC = config["SRC"]
+MAX_10X_JOBS = config["MAX_10X_JOBS"]
+
+hc_to_10x_map = {}
+for idx, sample in enumerate(HC_SAMPLES):
+    hc_to_10x_map[sample] = MRNA_SAMPLES[idx]
 
 rule all:
     input:
       expand("{data}/fastqs/{sample}_{read_id}_umi.fastq.gz",
-        data = DATA, sample = SAMPLES, read_id = ["R1", "R2"]),
+        data = DATA, sample = HC_SAMPLES, read_id = ["R1", "R2"]),
 
       expand(os.path.join("{data}", "counts",
-        "{sample}_umitools_counts.tsv.gz"),
-        data = DATA, sample = SAMPLES),
+        "{sample}", "umitools_counts.tsv.gz"),
+        data = DATA, sample = HC_SAMPLES),
       
       expand(os.path.join("{data}", "bam",
         "{sample}_haircut_umitagged_sorted.bam"),
-         data = DATA, sample = SAMPLES),
+         data = DATA, sample = HC_SAMPLES),
         
       expand(os.path.join("{data}", "molecules",
         "{sample}", "{outfiles}"),
-         data = DATA, sample = SAMPLES, 
-         outfiles = ["molecules.tsv.gz", 
-           "features.tsv.gz", 
-           "barcodes.tsv.gz"]),
+        data = DATA, sample = HC_SAMPLES, 
+        outfiles = ["molecules.tsv.gz", 
+          "features.tsv.gz", 
+          "barcodes.tsv.gz"]),
     
       expand(os.path.join("{data}", "counts",
-        "{sample}_mtx", "{outfiles}"),
-         data = DATA, sample = SAMPLES, 
+        "{sample}", "{mtx_type}", "{outfiles}"),
+         data = DATA, 
+         sample = HC_SAMPLES, 
+         mtx_type = ["unfiltered", "filtered"],
          outfiles = ["matrix.mtx.gz", 
-           "features.tsv.gz", 
-           "barcodes.tsv.gz"]),
+                     "features.tsv.gz", 
+                     "barcodes.tsv.gz"]),
 
+      expand(os.path.join("{data}",
+        "10x_mrna", 
+        "logs",
+        "{sample}_complete.txt"),
+        data = DATA, 
+        sample = MRNA_SAMPLES),
+          
 include: "rules/haircut_count.snake"
+include: "rules/10x_count.snake"
+

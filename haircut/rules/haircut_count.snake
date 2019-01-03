@@ -28,11 +28,27 @@ def _get_fastqs(wildcards):
     # sort to ensure that read 1 is first in list
     path_to_fqs = sorted(path_to_fqs, key=lambda k: fq_order.index(get_read_id(k)))
     
+    print("processing the following fastqs with the haircut pipeline",
+      file = sys.stderr)
     print("input fastq\tsample", file = sys.stderr) 
     for fq in path_to_fqs:
       print("{}\t{}".format(fq, wildcards.sample), file = sys.stderr)
     
     return path_to_fqs
+
+def _get_barcodes(wildcards):
+    """ get whitelisted barcodes from 10x run """
+    hcut_sample_id = wildcards.sample
+    mrna_sample_id = hc_to_10x_map[hcut_sample_id]
+
+    barcodes_path = os.path.join(wildcards.data, 
+                                 "10x_mrna",
+                                 mrna_sample_id,
+                                 "outs",
+                                 "filtered_feature_bc_matrix",
+                                 "barcodes.tsv.gz")
+    
+    return barcodes_path
 
 rule extract_umi_barcode:
     """
@@ -202,7 +218,7 @@ rule sort_by_cb:
       bam = os.path.join("{data}", "bam", "{sample}_haircut_umitagged_sorted.bam")
     params:
       cbtag = "CB" ,
-      job_name = "{sample}.group",
+      job_name = "{sample}.sort",
       memory = "select[mem>120] rusage[mem=120]",
     log:
       os.path.join("logs", "sort_sample", "{sample}")
@@ -225,7 +241,7 @@ rule count_umis:
       bam = os.path.join("{data}", "bam", "{sample}_haircut_tagged.bam"),
       bai = os.path.join("{data}", "bam", "{sample}_haircut_tagged.bam.bai")
     output:
-      os.path.join("{data}", "counts", "{sample}_umitools_counts.tsv.gz")
+      os.path.join("{data}", "counts", "{sample}", "umitools_counts.tsv.gz")
     params:
       job_name = "{sample}.count",
       memory = "select[mem>16] rusage[mem=16]",
@@ -248,13 +264,13 @@ rule make_mtx_format:
   convert umitools flat file to mtx sparseMatrix format
   """
   input:
-    os.path.join("{data}", "counts", "{sample}_umitools_counts.tsv.gz")
+    os.path.join("{data}", "counts", "{sample}", "umitools_counts.tsv.gz")
   output:
-    os.path.join("{data}", "counts", "{sample}_mtx", "matrix.mtx.gz"),
-    os.path.join("{data}", "counts", "{sample}_mtx", "features.tsv.gz"),
-    os.path.join("{data}", "counts", "{sample}_mtx", "barcodes.tsv.gz"),
+    mtx = os.path.join("{data}", "counts", "{sample}", "unfiltered", "matrix.mtx.gz"),
+    features = os.path.join("{data}", "counts", "{sample}", "unfiltered", "features.tsv.gz"),
+    bcs = os.path.join("{data}", "counts", "{sample}", "unfiltered", "barcodes.tsv.gz"),
   params:
-    outdir = os.path.join("{data}", "counts", "{sample}_mtx"),
+    outdir = os.path.join("{data}", "counts", "{sample}", "unfiltered"),
     job_name = "{sample}.convert",
     memory = "select[mem>16] rusage[mem=16]",
   log:
@@ -293,4 +309,32 @@ rule make_molecule_files:
     gzip {params.tmpmat}
     gzip {params.tmpfeatures}
     gzip {params.tmpbarcodes}
+    """
+
+rule make_filtered_matrix:
+  """
+  filter matrix to keep only cell barcodes 
+  """
+  input:
+    mtx = os.path.join("{data}", "counts", "{sample}", "unfiltered", "matrix.mtx.gz"),
+    features = os.path.join("{data}", "counts", "{sample}", "unfiltered", "features.tsv.gz"),
+    bcs = os.path.join("{data}", "counts", "{sample}", "unfiltered", "barcodes.tsv.gz"),
+    count_cmd = lambda wildcards: os.path.join(DATA, "10x_mrna", "logs", hc_to_10x_map[wildcards.sample] + "_complete.txt")
+  output:
+    os.path.join("{data}", "counts", "{sample}", "filtered", "matrix.mtx.gz"),
+    os.path.join("{data}", "counts", "{sample}", "filtered", "features.tsv.gz"),
+    os.path.join("{data}", "counts", "{sample}", "filtered", "barcodes.tsv.gz"),
+  params:
+    mrna_bcs = _get_barcodes,
+    indir = os.path.join("{data}", "counts", "{sample}", "unfiltered"),
+    outdir = os.path.join("{data}", "counts", "{sample}", "filtered"),
+    job_name = "{sample}.filter",
+    memory = "select[mem>16] rusage[mem=16]",
+  log:
+    os.path.join("logs", "filter_sample", "{sample}")
+  threads: 1
+  resources: all_threads=1
+  shell:
+    """
+    R -e 'scrunchy::filter_matrix("{params.indir}","{params.mrna_bcs}", "{params.outdir}")' 
     """
