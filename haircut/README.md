@@ -124,38 +124,12 @@ bsub < snakecharmer.sh
 
 # Output files
 
-If successful you should generated the following files (assuming your
-sample was named `JH134_2`).
+If successful you should generate the following files (assuming your
+haircut sample was named `JH134_2` and match mrna sample was `JH133`).
 
-```bash
-$ tree  
+```
+$ tree
 .
-|-- bam  
-|   |-- JH134_2_haircut.bam  <- aligned
-|   |-- JH134_2_haircut_tagged.bam <- Tags added: XT (CHROM_POS), BO (UMI), and CB (BARCODE)
-|   |-- JH134_2_haircut_tagged.bam.bai 
-|   |-- JH134_2_haircut_umitagged_sorted.bam <- BX (Corrected UMI), UG (UMI group), sorted by CB
-|-- counts
-|   |-- JH134_2_mtx   <- sparseMatrix formatted output for all barcodes
-|   |   |-- barcodes.tsv
-|   |   |-- features.tsv
-|   |   `-- matrix.mtx.gz
-|   `-- JH134_2_umitools_counts.tsv.gz <- UMItools flatfile output 
-|-- fastqs
-|   |-- JH134_2_R1_umi.fastq.gz <- umi moved to read id
-|   |-- JH134_2_R2_umi.fastq.gz
-|   `-- JH134_2_R2_umi_trimmed.fastq.gz <- trimmed fastq 
-`-- molecules
-    `-- JH134_2
-        |-- barcodes.tsv 
-        |-- features.tsv
-        `-- molecules.tsv.gz <- large flat file with per molecule information
-
-6 directories, 14 files
-```
-
-
-```
 |-- 10x_mrna
 |   |-- JH133 <- per sample 10x count output
 |   |   |-- JH133.mri.tgz
@@ -233,8 +207,11 @@ package. See `scrunchy::read_molecules()`
 
 The `molecules.tsv.gz` file contains 4 columns. 
 
-barcode_idx: one-based index of the barcode in the `barcodes.tsv.gz` file
-feature_idx: one-based index of the feature in the `features.tsv.gz` file
-UMI_2bit_sequence: inferred UMI sequence encoded in 2bit format as a uint64 integer
-read_count: number of reads associated with each `UMI`
+barcode_idx: one-based index of the barcode in the `barcodes.tsv.gz` file  
+
+feature_idx: one-based index of the feature in the `features.tsv.gz` file  
+
+UMI_2bit_sequence: inferred UMI sequence encoded in 2bit format as a uint64 integer  
+ 
+read_count: number of reads associated with each `UMI`  
 
