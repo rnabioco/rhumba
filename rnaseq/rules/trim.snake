@@ -5,9 +5,7 @@ def _fq_types(wildcards):
   """
 
   fq_suffixes = CMD_PARAMS["fq_suffix"]
-  fq_names = [path.join(wildcards.data,
-                        "fastq",
-                        "raw_data",
+  fq_names = [path.join(RAW_DATA,
                          wildcards.sample + x ) for
                          x in fq_suffixes]
   return fq_names

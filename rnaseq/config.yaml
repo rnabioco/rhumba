@@ -5,7 +5,11 @@
 LIBTYPE:
   "PE"
 
-# directory for data
+# directory containing fastqs
+RAW_DATA:
+  "../raw_data"
+
+# directory for data output
 DATA: 
   "../data"
 
