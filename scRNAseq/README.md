@@ -4,13 +4,10 @@
 This directory contains a snakemake pipeine to execute the 10x genomics
 cellranger count and aggregate pipelines on multiple samples. 
 
-The cellranger software is available on tesla/bodhi as a module, but we don't recommend using 
-the module as it won't take advantage of the pipelining functionality built into cellranger. Instead 
-add the cellranger executable in the following directory to your PATH in your `.bashrc`.
+The cellranger software is available on `bodhi` as a module. 
 
-i.e.
 ```bash
-PATH=${PATH}:"/beevol/home/riemondy/src/cellranger-2.2.0"
+module load cellranger/3.0.2
 ```
 
 To run this pipeline on new data edit `config.yaml` to specify the following important parameters:
@@ -79,6 +76,11 @@ To run this pipeline on new data edit `config.yaml` to specify the following imp
    `count` and `aggr`. Note that this is the maximum number of jobs
    submitted not maximum number of cores used. 
 
+7. `LSF_TEMPLATE`: This argument specifies the default job submission
+   template that cellranger will use to submit jobs to the queue. Edit
+   this file to remove the `-q rna` BSUB argument if you are not on the
+  `rna` queue.  
+   
 Lastly, the `snakecharmer.sh` script is a BSUB submission script that initiates the
 snakemake executable.
 
