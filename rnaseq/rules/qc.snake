@@ -1,11 +1,10 @@
 """ rules for basic QC checks """ 
 
-raw = path.join("{data}", "fastq", "raw_data")
 qc = path.join("{data}", "qc")
 
 rule fastqc:
   input:
-    path.join(raw, "{sample}.fastq.gz"),
+    path.join(RAW_DATA, "{sample}.fastq.gz"),
   output:
     path.join(qc, "fastqc", "{sample}_fastqc/summary.txt"),
   params:

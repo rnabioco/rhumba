@@ -9,6 +9,7 @@ import sys
 
 configfile: "config.yaml"
   
+RAW_DATA = config["RAW_DATA"]
 DATA = config["DATA"]
 SRC = config["SRC"]
 DBASES = config["DBASES"]
@@ -33,8 +34,7 @@ else:
 
 # find sample ids from fastqs if not in config
 if not SAMPLES:
-  SAMPLES = glob(path.join(DATA, "fastq",
-                    "raw_data",
+  SAMPLES = glob(path.join(RAW_DATA,
                     "*[gz|fastq|fq]"))
 
 
