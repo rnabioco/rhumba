@@ -16,5 +16,8 @@ SAMPLES:
 EXPT_GROUPS:
     - Sample_1,Sample_2 
 
+LSF_TEMPLATE:
+    "lsf.template"
+
 MAX_10X_JOBS:
     12

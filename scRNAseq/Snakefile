@@ -13,6 +13,7 @@ SAMPLES = config["SAMPLES"]
 TRANSCRIPTOME = config["TRANSCRIPTOME"]
 EXPT_GROUPS = config["EXPT_GROUPS"]
 MAX_10X_JOBS = config["MAX_10X_JOBS"]
+LSF_TEMPLATE = config["LSF_TEMPLATE"]
 
 rule all:
     input:

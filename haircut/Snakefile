@@ -15,6 +15,7 @@ HAIRCUT_FASTA = config["HAIRCUT_FASTA"]
 MRNA_REF = config["10X_REF"]
 SRC = config["SRC"]
 MAX_10X_JOBS = config["MAX_10X_JOBS"]
+LSF_TEMPLATE = config["LSF_TEMPLATE"]
 
 hc_to_10x_map = {}
 for idx, sample in enumerate(HC_SAMPLES):

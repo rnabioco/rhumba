@@ -8,8 +8,18 @@ set -o nounset -o pipefail -o errexit -x
 
 mkdir -p logs
 
-args=' -o {log}.out -e {log}.err -J {params.job_name} -R "
-{params.memory} span[hosts=1] " -n {threads}  '
+. /usr/share/Modules/init/bash
+module load modules modules-init modules-python
+module load cellranger/3.0.2
+
+args=' 
+  -q rna 
+  -o {log}.out 
+  -e {log}.err 
+  -J {params.job_name} 
+  -R "{params.memory} span[hosts=1] " 
+  -n {threads} ' 
+
 
 snakemake \
   --drmaa "$args" \
