@@ -42,4 +42,4 @@ snakemake --drmaa "$args" \
     --resources all_threads=72 \
     --latency-wait 50 \
     --rerun-incomplete  \
-    --configfile config.yaml 
+    --configfile config_files/config.yaml 

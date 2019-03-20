@@ -6,7 +6,7 @@ rule fastqc:
   input:
     path.join(RAW_DATA, "{sample}.fastq.gz"),
   output:
-    path.join(qc, "fastqc", "{sample}_fastqc/summary.txt"),
+    path.join(qc, "fastqc", "{sample}_fastqc.html"),
   params:
     out_dir = path.join(qc, "fastqc"),
     job_name = "fastqc.{sample}",

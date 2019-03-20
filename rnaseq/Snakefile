@@ -55,7 +55,7 @@ rule all:
       data = DATA),
 
     #### qc ####
-    expand("{data}/qc/fastqc/{sample}{read}_fastqc/summary.txt",
+    expand("{data}/qc/fastqc/{sample}{read}_fastqc.html",
       data=DATA, sample = SAMPLES, 
       read = [x.split(".")[0] for x in CMD_PARAMS["fq_suffix"]]),
     expand("{data}/qc/rseqc/{sample}_{reports}.txt",
