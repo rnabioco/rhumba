@@ -27,6 +27,7 @@ module load modules modules-init modules-python
 module load samtools/1.5
 module load bowtie2/2.3.2
 module load R/3.5.0
+module load cellranger/3.0.2
 
 # other programs (not in modules)
 # umi_tools 

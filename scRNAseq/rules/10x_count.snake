@@ -113,7 +113,7 @@ rule cellranger_count:
           --id={wildcards.sample} \
           --fastqs={params.indir} \
           --sample={params.fqs} \
-          --jobmode=lsf \
+          --jobmode={LSF_TEMPLATE} \
           --project={PROJECT} \
           --maxjobs={MAX_10X_JOBS} \
           --transcriptome={TRANSCRIPTOME}
@@ -150,7 +150,7 @@ rule cellranger_aggr:
       cellranger aggr \
           --csv={params.groups[1]} \
           --id={params.groups[0]} \
-          --jobmode=lsf \
+          --jobmode={LSF_TEMPLATE} \
           --maxjobs={MAX_10X_JOBS} 
       
       mkdir -p {params.outdir}
