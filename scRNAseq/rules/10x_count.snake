@@ -42,7 +42,7 @@ def _get_sample_ids(wildcards):
     no_lane = "_S[0-9]+_[RI][12]_001\.fastq\.gz$"
     lane = "_S[0-9]+_L[0-9]{3}_[RI][12]_001\.fastq\.gz$"
 
-    fq_dir = os.path.join(wildcards.data, "raw_data")          
+    fq_dir =  RAW_DATA 
     fqs = glob.glob(os.path.join(fq_dir, wildcards.sample + "*"))
     R1_fqs = [x for x in fqs if "R1" in x]
     R1_fqs = [os.path.basename(x) for x in R1_fqs]
@@ -69,7 +69,7 @@ def _get_sample_fq_paths(wildcards):
     sample_ids = _get_sample_ids(wildcards)
     sample_ids = sample_ids.split(",")
 
-    fq_dir = os.path.join(wildcards.data, "raw_data")          
+    fq_dir = RAW_DATA 
     input_fqs = set()
     for sample in sample_ids:
       
@@ -100,7 +100,7 @@ rule cellranger_count:
     params:
       fqs = _get_sample_ids,
       outdir = "{data}/results/",
-      indir = os.path.join("{data}","raw_data"),
+      indir =  RAW_DATA, 
       job_name = "count",
       memory = "select[mem>4] rusage[mem=4]",
     log: "logs/{sample}_count.out"

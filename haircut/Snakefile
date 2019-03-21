@@ -6,20 +6,17 @@ import os
 
 configfile: "config.yaml"
 
-HAIRCUT_DATA = config["HAIRCUT_DATA"]
-MRNA_DATA = config["10X_DATA"]
+RAW_DATA = config["RAW_DATA"]
 DATA = config["DATA"]
 HC_SAMPLES = config["HAIRCUT_SAMPLES"]
-MRNA_SAMPLES = config["10X_SAMPLES"]
+BC_WHITELIST = config["10X_WHITELIST"]
+MRNA_BARCODES = config["CELL_BARCODES"]
 HAIRCUT_FASTA = config["HAIRCUT_FASTA"]
-MRNA_REF = config["10X_REF"]
 SRC = config["SRC"]
-MAX_10X_JOBS = config["MAX_10X_JOBS"]
-LSF_TEMPLATE = config["LSF_TEMPLATE"]
 
 hc_to_10x_map = {}
 for idx, sample in enumerate(HC_SAMPLES):
-    hc_to_10x_map[sample] = MRNA_SAMPLES[idx]
+    hc_to_10x_map[sample] = MRNA_BARCODES[idx]
 
 rule all:
     input:
@@ -50,13 +47,5 @@ rule all:
                      "features.tsv.gz", 
                      "barcodes.tsv.gz"]),
 
-      expand(os.path.join("{data}",
-        "10x_mrna", 
-        "logs",
-        "{sample}_complete.txt"),
-        data = DATA, 
-        sample = MRNA_SAMPLES),
-          
 include: "rules/haircut_count.snake"
-include: "rules/10x_count.snake"
 

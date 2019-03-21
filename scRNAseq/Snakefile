@@ -8,6 +8,7 @@ import os
 configfile: "config.yaml"
 
 PROJECT = config ["PROJECT"]
+RAW_DATA = config["RAW_DATA"]
 DATA = config["DATA"]
 SAMPLES = config["SAMPLES"]
 TRANSCRIPTOME = config["TRANSCRIPTOME"]

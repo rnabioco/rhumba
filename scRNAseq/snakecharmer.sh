@@ -27,4 +27,4 @@ snakemake \
   --jobs 3 \
   --latency-wait 50 \
   --rerun-incomplete  \
-  --configfile config.yaml 
+  --configfile config_files/config.yaml 

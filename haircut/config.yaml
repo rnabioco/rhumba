@@ -1,12 +1,9 @@
 # config file for processing functional count data 
 
-HAIRCUT_DATA:
+RAW_DATA:
     # path to input raw haircut fastqs
-    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/haircut"
+    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/2019-03-20_data/haircut"
 
-10X_DATA:
-    # path to input raw haircut fastqs
-    "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/raw_data/mrna"
 DATA:
     # path to output data files
     "../data"
@@ -16,19 +13,22 @@ HAIRCUT_FASTA:
 
 HAIRCUT_SAMPLES:
     - JH134_2 
+    - JH141_PBMC1
+    - JH141_PBMC2
 
-10X_SAMPLES:
-    - JH133 
+10X_WHITELIST:
+    # known barcodes used in the 10x libraires to use for error correction
+    "/cluster/software/modules-sw/cellranger/3.0.2/cellranger-cs/3.0.2/lib/python/cellranger/barcodes/737K-august-2016.txt"
 
-10X_REF:
-    "/beevol/home/riemondy/Projects/shared_dbases/cell_ranger/refdata-cellranger-GRCh38-3.0.0"
+CELL_BARCODES:
+    # barcodes considered to be cells based on cellrange count run on mRNA
+    # data
+    - "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/2019-03-20_mrna/JH133/outs/filtered_feature_bc_matrix/barcodes.tsv.gz"
+    - "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/2019-03-20_mrna/JH140_PBMC1/outs/filtered_feature_bc_matrix/barcodes.tsv.gz"
+    - "/beevol/home/riemondy/Projects/various_repos/haircut_pipeline/2019-03-20_mrna/JH140_PBMC2/outs/filtered_feature_bc_matrix/barcodes.tsv.gz"
 
 SRC:
     # path to directory with source code " 
     "../src"
 
-LSF_TEMPLATE:
-    "lsf.template"
 
-MAX_10X_JOBS:
-    18
