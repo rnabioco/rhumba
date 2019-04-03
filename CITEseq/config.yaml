@@ -1,0 +1,32 @@
+
+# Config file for running 10x pipeline with CITE-seq data
+
+PROJ_DIR:
+    "/path/to/project"
+
+EXPRESSION_DATA:
+    "/path/to/expression_fqs"
+
+FEATURE_DATA:
+    "/path/to/feature_fqs"
+    
+SAMPLES:
+    - Expression_1,Feature_1
+    - Expression_2,Feature_2
+    - Expression_3,Feature_3
+
+EXPT_GROUPS:
+    - Expression_1,Expression_2,Expression_3
+
+FEATURE_TYPE:
+    "Antibody Capture"
+
+FEATURE_REF:
+    "/path/to/feature_reference.csv"
+
+TRANSCRIPTOME:
+    "/beevol/home/rbilab/ref/cellranger/human/GRCh38"
+
+MAX_10X_JOBS:
+    16
+

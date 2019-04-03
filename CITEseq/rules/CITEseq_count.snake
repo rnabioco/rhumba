@@ -1,0 +1,207 @@
+import os 
+import re
+import glob
+
+""" Snakerules for running 10x cellranger with CITE-seq data """
+
+
+def _get_fqs(wildcards):
+    """
+    Retrieve path for gene expression and feature fastqs. Return a list of
+    comma separated paths.
+    """
+
+    def get_path(fq_dir, fq_name):
+        fq_dir = "".join(fq_dir)
+        fqs    = glob.glob(os.path.join(fq_dir + "/" + fq_name + "*"))
+        R1_fqs = [x for x in fqs if "R1" in x]
+    
+        fq_str = ""
+
+        for fq in R1_fqs:
+            fq_str += fq
+            fq_str += ","
+
+        fq_str = fq_str.strip(",")
+
+        return fq_str
+
+    exp_id  = wildcards.sample.split(",")[0]
+    f_id    = wildcards.sample.split(",")[1]
+
+    exp_fqs = get_path({EXPRESSION_DATA}, exp_id)
+    f_fqs   = get_path({FEATURE_DATA}, f_id)
+
+    return [exp_fqs, f_fqs]
+
+
+
+def _collect_groups(wildcards):
+    """
+    Generate a csv file with path to molecule_info.h5 for each expt
+    group. Return group_id and path to csv as a list.
+    """
+     
+    out_dir  = os.path.join(wildcards.proj_dir, "results")
+    groups   = wildcards.expt_groups
+    groups   = groups.split(",")
+    group_id = re.sub("_*[0-9]*$", "", groups[0])
+
+    out = open(group_id + "_groups_def.csv", 'w')
+    out.write("library_id,molecule_h5\n")
+
+    for group in groups: 
+        if group is "":
+            continue
+
+        library = group.strip(" ")
+        path    = os.path.join(out_dir, library, "outs", "molecule_info.h5")
+
+        out.write("{},{}\n".format(library, path))
+    
+    out.close()
+
+    # Return list with group id and path to csv
+    return [group_id + "_aggr", group_id + "_groups_def.csv"]
+
+
+
+# Create csv file used by cellranger count
+rule create_lib_csv:
+    output:
+        "{proj_dir}/results/{sample}.csv",
+    params:
+        job_name = "csv",
+        memory   = "select[mem>4] rusage[mem=4]",
+        fqs      = _get_fqs
+    log:
+        "{proj_dir}/logs/{sample}_csv"
+    threads:
+        1
+    shell:
+        """
+        build_csv() {{
+            fqs=$1
+            lib_type=$2
+          
+            no_lane="_S[0-9]+_[RI][12]_001\.fastq\.gz$"
+            lane="_S[0-9]+_L[0-9]{{3}}_[RI][12]_001\.fastq\.gz$"
+
+            IFS="," read -a fq_arr <<< $fqs
+    
+            for fq in ${{fq_arr[@]}}
+            do
+                if [[ ! $fq =~ $lane && ! $fq =~ $no_lane ]]
+                then
+                    # This message is not going to err
+                    echo "Unable to parse out sample id from $fq" 1>&2
+                    exit 1
+                fi
+
+                fq_name=$(basename $fq)
+                fq_path=$(echo $fq | sed -r "s/\/$fq_name//g")
+                fq_id=$(echo $fq_name | sed -r "s/$lane//g")
+                fq_id=$(echo $fq_id | sed -r "s/$no_lane//g")
+
+                echo $fq_path,$fq_id,$lib_type >> {output}
+            done
+        }}
+
+        exp_fqs={params.fqs[0]}
+        f_fqs={params.fqs[1]}
+
+        echo fastqs,sample,library_type >> {output}
+
+        build_csv $exp_fqs "Gene Expression"
+        build_csv $f_fqs   "{FEATURE_TYPE}"
+        """
+
+
+
+# Run cellranger count
+rule cellranger_count:
+    input:
+        "{proj_dir}/results/{sample}.csv"
+    output:
+        "{proj_dir}/results/logs/{sample}_count.out"
+    params:
+        job_name = "count",
+        memory   = "select[mem>60] rusage[mem=60]",
+        out_dir  = "{proj_dir}/results/"
+    log:
+        "{proj_dir}/logs/{sample}_count"
+    threads:
+        36
+    shell:
+        """
+        set -x
+
+        job_id=$(echo {wildcards.sample} | cut -d "," -f 1)
+
+        cellranger count \
+            --id=$job_id \
+            --localcores={threads} \
+            --maxjobs={MAX_10X_JOBS} \
+            --localmem=60 \
+            --transcriptome={TRANSCRIPTOME} \
+            --feature-ref={FEATURE_REF} \
+            --libraries={input}
+
+        mkdir -p {params.out_dir}
+        mv -u $job_id {params.out_dir}
+
+        echo "done" > {output}
+
+
+        # Check for output bam file produced by count
+        #bam={params.out_dir}/$job_id/outs/possorted_genome_bam.bam
+        #if [ -s $bam ]
+        #    then
+        #    echo "done" > {output}
+        #fi
+        """
+
+
+
+# Run cellranger aggr
+rule cellranger_aggr:
+    input:
+        expand("{proj_dir}/results/logs/{sample}_count.out",
+            sample = SAMPLES, proj_dir = PROJ_DIR)
+    output:
+        "{proj_dir}/results/logs/{expt_groups}_aggr.out"
+    params:
+        job_name = "aggr",
+        memory   = "select[mem>4] rusage[mem=4]",
+        groups   = _collect_groups,
+        out_dir  = "{proj_dir}/results/"
+    log:
+        "{proj_dir}/logs/{expt_groups}_aggr"
+    threads: 
+        2 
+    shell:
+        """
+        set -x
+
+        cellranger aggr \
+            --id={params.groups[0]} \
+            --csv={params.groups[1]} \
+            --jobmode=lsf \
+            --maxjobs={MAX_10X_JOBS} 
+ 
+        mkdir -p {params.out_dir}
+        mv -u {params.groups[0]} {params.out_dir}
+        mv -u {params.groups[1]} {params.out_dir}      
+
+        echo "done" > {output}
+
+
+        # Check for output summary produced by aggr
+        #summary_html={params.out_dir}{params.groups[0]}/outs/web_summary.html
+        #if [ -s $summary_html ]
+        #then
+        #    echo "done" > {output}
+        #fi
+        """ 
+
+

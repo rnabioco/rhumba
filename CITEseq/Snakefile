@@ -1,0 +1,29 @@
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; ")
+import os 
+
+""" Snakefile for running 10x pipeline """
+
+configfile: "config.yaml"
+
+PROJ_DIR        = config["PROJ_DIR"]
+EXPRESSION_DATA = config["EXPRESSION_DATA"]
+FEATURE_DATA    = config["FEATURE_DATA"]
+SAMPLES         = config["SAMPLES"]
+EXPT_GROUPS     = config["EXPT_GROUPS"]
+FEATURE_TYPE    = config["FEATURE_TYPE"]
+FEATURE_REF     = config["FEATURE_REF"]
+TRANSCRIPTOME   = config["TRANSCRIPTOME"]
+MAX_10X_JOBS    = config["MAX_10X_JOBS"]
+
+
+rule all:
+    input:
+        expand("{proj_dir}/results/logs/{sample}_count.out", 
+            proj_dir = PROJ_DIR, sample = SAMPLES),
+
+        expand("{proj_dir}/results/logs/{expt_groups}_aggr.out", 
+            proj_dir = PROJ_DIR, expt_groups = EXPT_GROUPS)
+
+include: "rules/CITEseq_count.snake"
+
