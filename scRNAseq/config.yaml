@@ -3,6 +3,9 @@
 DATA:
     "../runs/tmp"
 
+RAW_DATA:
+    "path/to/fastqs"
+
 PROJECT:
     "Example"
 

@@ -103,7 +103,7 @@ rule cellranger_count:
       indir =  RAW_DATA, 
       job_name = "count",
       memory = "select[mem>4] rusage[mem=4]",
-    log: "logs/{sample}_count.out"
+    log: "{data}/logs/{sample}_count.out"
     threads: 2
     shell:
       """
@@ -142,7 +142,7 @@ rule cellranger_aggr:
       outdir = "{data}/results/",
       job_name = "aggr",
       memory = "select[mem>4] rusage[mem=4]",
-    log: "logs/{expt_groups}_aggr.out"
+    log: "{data}/logs/{expt_groups}_aggr.out"
     threads: 2
     shell:
       """
