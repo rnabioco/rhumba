@@ -13,7 +13,7 @@ def _get_fqs(wildcards):
 
     def get_path(fq_dir, fq_name):
         fq_dir = "".join(fq_dir)
-        fqs    = glob.glob(os.path.join(fq_dir + "/" + fq_name + "*"))
+        fqs    = glob.glob(os.path.join(fq_dir, fq_name + "*"))
         R1_fqs = [x for x in fqs if "R1" in x]
     
         fq_str = ""
@@ -33,7 +33,6 @@ def _get_fqs(wildcards):
     f_fqs   = get_path({FEATURE_DATA}, f_id)
 
     return [exp_fqs, f_fqs]
-
 
 
 def _collect_groups(wildcards):
@@ -63,7 +62,6 @@ def _collect_groups(wildcards):
 
     # Return list with group id and path to csv
     return [group_id + "_aggr", group_id + "_groups_def.csv"]
-
 
 
 # Create csv file used by cellranger count
@@ -117,7 +115,6 @@ rule create_lib_csv:
         """
 
 
-
 # Run cellranger count
 rule cellranger_count:
     input:
@@ -126,23 +123,20 @@ rule cellranger_count:
         "{proj_dir}/results/logs/{sample}_count.out"
     params:
         job_name = "count",
-        memory   = "select[mem>60] rusage[mem=60]",
+        memory   = "select[mem>4] rusage[mem=4]",
         out_dir  = "{proj_dir}/results/"
     log:
         "{proj_dir}/logs/{sample}_count"
     threads:
-        36
+        1
     shell:
         """
-        set -x
-
         job_id=$(echo {wildcards.sample} | cut -d "," -f 1)
 
         cellranger count \
             --id=$job_id \
-            --localcores={threads} \
+            --jobmode=lsf \
             --maxjobs={MAX_10X_JOBS} \
-            --localmem=60 \
             --transcriptome={TRANSCRIPTOME} \
             --feature-ref={FEATURE_REF} \
             --libraries={input}
@@ -162,7 +156,6 @@ rule cellranger_count:
         """
 
 
-
 # Run cellranger aggr
 rule cellranger_aggr:
     input:
@@ -178,11 +171,9 @@ rule cellranger_aggr:
     log:
         "{proj_dir}/logs/{expt_groups}_aggr"
     threads: 
-        2 
+        1 
     shell:
         """
-        set -x
-
         cellranger aggr \
             --id={params.groups[0]} \
             --csv={params.groups[1]} \
