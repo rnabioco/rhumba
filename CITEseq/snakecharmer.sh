@@ -7,9 +7,15 @@
 
 set -o nounset -o pipefail -o errexit -x
 
-mkdir -p logs
 
-args=' -o {log}.out -e {log}.err -J {params.job_name} -q rna -R " {params.memory} span[hosts=1] " -n {threads} '
+args='
+    -o {log}.out 
+    -e {log}.err 
+    -J {params.job_name} 
+    -q rna 
+    -R " {params.memory} span[hosts=1] " 
+    -n {threads} '
+
 
 snakemake \
   --drmaa "$args" \
@@ -18,4 +24,5 @@ snakemake \
   --latency-wait 60 \
   --rerun-incomplete  \
   --configfile config.yaml 
+
 

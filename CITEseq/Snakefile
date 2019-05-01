@@ -1,5 +1,5 @@
 shell.executable("/bin/bash")
-shell.prefix("source ~/.bash_profile; ")
+shell.prefix("source ~/.bash_profile; set -o nounset -o pipefail -o errexit -x; ")
 import os 
 
 """ Snakefile for running 10x pipeline """
