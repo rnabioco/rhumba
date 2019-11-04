@@ -1,0 +1,92 @@
+import os 
+import glob
+
+""" Snakerules for running kallisto-bustools on 10x data """
+
+def _get_sample_fq_paths(wildcards):
+    if wildcards.lib == "velocity":
+      path_lib = "gex"
+    else:
+      path_lib = wildcards.lib
+
+    fq_dir = os.path.join(wildcards.data, "raw_data", path_lib)          
+    fqs = sorted(glob.glob(os.path.join(fq_dir, wildcards.sample + "*")))
+
+    return fqs
+
+def _get_index(wildcards):
+    return lib_type[wildcards.lib]
+
+rule kallisto:
+    input:
+      _get_sample_fq_paths
+    output:
+      "{data}/results/{lib}/{sample}/output.bus"
+    params:
+      index = _get_index,
+      out_dir = "{data}/results/{lib}/{sample}", 
+      job_name = "kallisto",
+      memory = "select[mem>4] rusage[mem=4]",
+    log: "logs/{sample}_kallisto_{lib}.out"
+    threads: 4
+    shell:
+      """
+      kallisto bus -i {params.index}/index.idx \
+        -o {params.out_dir} \
+        -x {CHEMISTRY} \
+        -t 4 {input}
+      """ 
+
+rule bustools:
+    input:
+      "{data}/results/{lib}/{sample}/output.bus"
+    output:
+      "{data}/results/{lib}/{sample}/counts/counts.mtx"
+    params:
+      index = _get_index,
+      out_dir = "{data}/results/{lib}/{sample}", 
+      tmp_dir = "{data}/results/{lib}/{sample}/tmp",
+      count_dir = "{data}/results/{lib}/{sample}/counts", 
+      job_name = "bustools",
+      memory = "select[mem>16] rusage[mem=16]",
+    log: "logs/{sample}_bustools_{lib}.out"
+    threads: 4
+    shell:
+      """
+      mkdir {params.tmp_dir} 
+
+      bustools correct -w {BARCODES} \
+        -p {input} | \
+        bustools sort -T {params.tmp_dir} \
+        -t 4 -p - | \
+        bustools count -o {params.count_dir}/counts \
+        -g {params.index}/index.t2g \
+        -e {params.out_dir}/matrix.ec \
+        -t {params.out_dir}/transcripts.txt \
+        --genecounts -
+      """
+
+rule kb_velocity:
+    input: 
+      _get_sample_fq_paths
+    output:
+      "{data}/results/{lib}/{sample}/gene_count/gc_cDNA/s.mtx"
+    params:
+      out_dir = "{data}/results/{lib}/{sample}", 
+      job_name = "kb_velocity",
+      memory = "select[mem>64] rusage[mem=64]",
+    log: "logs/{sample}_kb_velocity.out"
+    threads: 12
+    shell:
+      """
+      module load python/3.6.3
+
+      kb count -i {VELOCITY_INDEX}/index.idx \
+        -g {VELOCITY_INDEX}/transcripts_to_genes.txt \
+        -x {CHEMISTRY} \
+        -o {params.out_dir} \
+        -c1 {VELOCITY_INDEX}/cdna_transcripts_to_capture.txt \
+        -c2 {VELOCITY_INDEX}/intron_transcripts_to_capture.txt \
+        --lamanno -m 24G -t 12 \
+        --verbose {input}
+      """ 

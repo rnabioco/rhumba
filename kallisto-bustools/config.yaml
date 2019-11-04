@@ -1,0 +1,74 @@
+# config file for running Kallisto-bustools on 10x data
+
+# data dir must contain raw_data/gex and raw_data/adt raw_data/hto (as appropriate)
+DATA:
+    "../data"
+
+# directory containing index.idx and index.t2g for mRNAs
+GEX_INDEX:
+    "ref/refdata-cellranger-GRCh38-3.0.0"
+
+# directory containing index.idx and index.t2g for ADTs
+ADT_INDEX:
+    "ref/uhg_adt_20191101"
+
+# directory containing index.idx and index.t2g for HTOs
+HTO_INDEX:
+    "ref/uhg_hto_20191101"
+
+VELOCITY_INDEX:
+    "ref/refdata-cellranger-GRCh38-3.0.0_velocity"
+
+BARCODES:
+    "ref/10xv3_whitelist.txt"
+
+CHEMISTRY:
+    "10xv3"
+
+GEX:
+    - 1_GEX
+    - 2_GEX
+    - 3_GEX
+    - 4_GEX
+    - 5_GEX
+    - 6_GEX
+    - 7_GEX
+    - 8_GEX
+    - pilot1b_1_GEX
+    - pilot1b_2_GEX
+    - pilot1b_3_GEX
+    - pilot1b_4_GEX
+    - pilot1b_5_GEX
+    - pilot1b_6_GEX
+    - pilot1b_7_GEX
+    - pilot1b_8_GEX
+
+ADT:
+    - 1_ADT
+    - 2_ADT
+    - 3_ADT
+    - 4_ADT
+    - 5_ADT
+    - 6_ADT
+    - 7_ADT
+    - 8_ADT
+    - pilot1b_1_ADT
+    - pilot1b_2_ADT
+    - pilot1b_3_ADT
+    - pilot1b_4_ADT
+    - pilot1b_5_ADT
+    - pilot1b_6_ADT
+    - pilot1b_7_ADT
+    - pilot1b_8_ADT
+
+HTO:
+    - 4_HTO
+    - 5_HTO
+    - 6_HTO
+    - 7_HTO
+    - 8_HTO
+    - pilot1b_4_HTO
+    - pilot1b_5_HTO
+    - pilot1b_6_HTO
+    - pilot1b_7_HTO
+    - pilot1b_8_HTO

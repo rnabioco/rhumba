@@ -1,0 +1,41 @@
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bash_profile; ")
+import os 
+
+""" Snakefile for running 10x kallisto-bustools pipeline """
+# expects kallisto and bustools executables in PATH
+
+configfile: "config.yaml"
+
+DATA = config["DATA"]
+GEX = config["GEX"]
+ADT = config["ADT"]
+HTO = config["HTO"]
+GEX_INDEX = config["GEX_INDEX"]
+ADT_INDEX = config["ADT_INDEX"]
+HTO_INDEX = config["HTO_INDEX"]
+VELOCITY_INDEX = config["VELOCITY_INDEX"]
+BARCODES = config["BARCODES"]
+CHEMISTRY = config["CHEMISTRY"]
+
+lib_type = {"gex": GEX_INDEX,
+            "adt": ADT_INDEX,
+            "hto": HTO_INDEX}
+
+rule all:
+    input:
+      # generate gene counts
+      expand("{data}/results/{lib}/{sample}/counts/counts.mtx", data = DATA,
+        sample = GEX, lib = "gex"),
+      # generate adt counts
+      expand("{data}/results/{lib}/{sample}/counts/counts.mtx", data = DATA,
+        sample = ADT, lib = "adt"),
+      # generate hto counts
+      expand("{data}/results/{lib}/{sample}/counts/counts.mtx", data = DATA,
+        sample = HTO, lib = "hto")
+      # generate mRNA/intron counts for RNA velocity with kb-python
+      # currently doesn't work (memory issue)
+      #expand("{data}/results/{lib}/{sample}/gene_count/gc_cDNA/s.mtx", data = DATA,
+      #  sample = GEX, lib = "velocity")
+
+include: "rules/kallisto_bustools.snake"
