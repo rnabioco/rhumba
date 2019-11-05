@@ -1,29 +1,102 @@
+# ===== Pipeline for running cellranger ========================================
+
+
+# Configure shell for all rules 
 shell.executable("/bin/bash")
-shell.prefix("source ~/.bash_profile; set -o nounset -o pipefail -o errexit -x; ")
+shell.prefix("set -o nounset -o pipefail -o errexit -x; ")
+import subprocess
+import glob
 import os 
-
-""" Snakefile for running 10x pipeline """
-
-configfile: "config.yaml"
-
-PROJ_DIR        = config["PROJ_DIR"]
-EXPRESSION_DATA = config["EXPRESSION_DATA"]
-FEATURE_DATA    = config["FEATURE_DATA"]
-SAMPLES         = config["SAMPLES"]
-EXPT_GROUPS     = config["EXPT_GROUPS"]
-FEATURE_TYPE    = config["FEATURE_TYPE"]
-FEATURE_REF     = config["FEATURE_REF"]
-TRANSCRIPTOME   = config["TRANSCRIPTOME"]
-MAX_10X_JOBS    = config["MAX_10X_JOBS"]
+import re
 
 
+
+# Parameters from config.yaml
+RAW_DATA     = config["RAW_DATA"]
+RESULTS      = config["RESULTS"]
+RNA_SAMPLES  = config["RNA_SAMPLES"]
+GROUPS       = config["GROUPS"]
+GENOME       = config["GENOME"]
+ADT_SAMPLES  = config["ADT_SAMPLES"]
+ADT_REF      = config["ADT_REF"]
+ANTIBODIES   = config["ANTIBODIES"]
+VDJ_SAMPLES  = config["VDJ_SAMPLES"]
+VDJ_REF      = config["VDJ_REF"]
+MAX_JOBS     = config["MAX_JOBS"]
+LSF_TEMPLATE = config["LSF_TEMPLATE"]
+
+
+
+# Function to check paths for input files/directories
+def _check_path(path):
+    if os.path.exists(path):
+        return os.path.abspath(path)
+    else:
+        sys.exit("ERROR: " + path + " does not exist.")
+
+
+
+# Set sample/group names
+RNA_SAMPLES = [x.strip() for x in RNA_SAMPLES]
+SAMPLES     = RNA_SAMPLES
+FASTQ_REGEX = "_S[0-9]+_L[0-9]+_R[12]_[0-9]+\.fastq\.gz"
+
+if GROUPS:
+    GROUPS = [re.sub(" ", "", x) for x in GROUPS]
+    GROUPS = [re.sub(",", "-", x) for x in GROUPS]
+
+if ADT_SAMPLES:
+    ADT_SAMPLES = [re.sub(" ", "", x) for x in ADT_SAMPLES]
+    SAMPLES     = [x + "-" + re.sub(",", "_", y) for x, y in zip(RNA_SAMPLES, ADT_SAMPLES)]
+    ADT_REF     = _check_path(ADT_REF)
+
+    if not ANTIBODIES:
+        sys.exit("ERROR: No antibodies were provided in config.yaml.")
+
+if VDJ_SAMPLES:
+    VDJ_SAMPLES = [x.strip() for x in VDJ_SAMPLES]
+    VDJ_REF     = _check_path(VDJ_REF)
+
+
+
+# Check directory/file paths
+RAW_DATA = [_check_path(x) for x in RAW_DATA]
+RESULTS  = _check_path(RESULTS)
+GENOME   = _check_path(GENOME)
+
+if LSF_TEMPLATE:
+    LSF_TEMPLATE = _check_path(LSF_TEMPLATE)
+else:
+    LSF_TEMPLATE = "lsf"
+
+FASTQ_DIR = RESULTS + "/fastqs"
+
+if not os.path.exists(FASTQ_DIR):
+    os.makedirs(FASTQ_DIR)
+
+
+
+# Final output files
 rule all:
     input:
-        expand("{proj_dir}/results/logs/{sample}_count.out", 
-            proj_dir = PROJ_DIR, sample = SAMPLES),
+        expand(
+            "{results}/logs/antibody_csv.out",
+            results = RESULTS
+        ),
+        expand(
+            "{results}/logs/{sample}_count.out", 
+            results = RESULTS, sample = SAMPLES
+        ),
+        expand(
+            "{results}/logs/{group}_aggr.out", 
+            results = RESULTS, group = GROUPS
+        ),
+        expand(
+            "{results}/logs/{vdj_sample}_vdj.out",
+            results = RESULTS, vdj_sample = VDJ_SAMPLES
+        )
 
-        expand("{proj_dir}/results/logs/{expt_groups}_aggr.out", 
-            proj_dir = PROJ_DIR, expt_groups = EXPT_GROUPS)
+include: "src/rules/cellranger.snake"
 
-include: "rules/CITEseq_count.snake"
+
 
