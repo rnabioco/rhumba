@@ -38,54 +38,50 @@ def _get_sample_ids(wildcards):
     return:
     sample_name_1,sample_name_2,sample_name_3
     """
+    fq_regex = "_S[0-9]+_L[0-9]{3}_[RI][12]_001\.fastq\.gz$"
 
-    no_lane = "_S[0-9]+_[RI][12]_001\.fastq\.gz$"
-    lane = "_S[0-9]+_L[0-9]{3}_[RI][12]_001\.fastq\.gz$"
-
-    fq_dir =  RAW_DATA 
-    fqs = glob.glob(os.path.join(fq_dir, wildcards.sample + "*"))
+    fqs = _get_sample_fq_paths(wildcards)
     R1_fqs = [x for x in fqs if "R1" in x]
     R1_fqs = [os.path.basename(x) for x in R1_fqs]
 
     sample_ids = set()
     for fq in R1_fqs:
-      if re.search(lane, fq) is not None:
-        sample_id = re.sub(lane, "", fq)
-        sample_ids.add(sample_id)
-
-      elif re.search(no_lane, fq) is not None:
-        # Novaseq style S1 flowcell
-        sample_id = re.sub(no_lane, "", fq)
+      if re.search(fq_regex, fq) is not None:
+        sample_id = re.sub(fq_regex, "", fq)
         sample_ids.add(sample_id)
       else:
         sys.exit("unable to parse out sample id from {}".format(fq))
-
+    
     return ",".join(sample_ids)
 
 def _get_sample_fq_paths(wildcards):
-    """ generate list of fastqs that contain sample prefix 
-    """
     
-    sample_ids = _get_sample_ids(wildcards)
-    sample_ids = sample_ids.split(",")
+    fq_regex = "(_[1-4]_|_)S[0-9]+_L[0-9]{3}_[RI][12]_001\.fastq\.gz$"
+    
+    fq_dir = RAW_DATA
+     
+    fqs = glob.glob(os.path.join(fq_dir, wildcards.sample + '*'))
 
-    fq_dir = RAW_DATA 
-    input_fqs = set()
-    for sample in sample_ids:
-      
-      r1_pattern = sample + "*" + "R1_001.fastq.gz"
-      
-      r1s = glob.glob(os.path.join(fq_dir, r1_pattern))
-      r2s = [re.sub("_R1_001.fastq.gz$", "_R2_001.fastq.gz", x) for x in r1s] 
-      reads = r1s + r2s
-      for read in reads:
-        input_fqs.add(read)
-    
+    res = set()
+    for fq in fqs:
+      m = re.fullmatch(wildcards.sample + fq_regex,
+                       os.path.basename(fq))
+      if m:
+          res.add(fq)
+    # sort to ensure that R1 is before R2
+    res = sorted(list(res))
+
+    if len(res) == 0:
+      sys.exit("no fastqs found for sample {}".format(wildcards.sample))
+    elif len(res) not in [2, 8]:
+      print("# of fastqs is non-standard, # = {}".format(str(len(res))),
+            file = sys.stderr)
+
     print("running cellranger on the following fqs\nfastq\tsample", file = sys.stderr) 
-    for fq in input_fqs:
+    for fq in res:
       print("{}\t{}".format(fq, wildcards.sample), file = sys.stderr)
 
-    return input_fqs
+    return res
 
 rule cellranger_count:
     """ note that cellranger count will fail if the output directory
