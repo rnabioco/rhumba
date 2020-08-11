@@ -37,6 +37,7 @@ rule merge_fastqs:
             for dir in params.raw_data:
                 fq_paths = os.path.join(dir, sample + "*" + read + "*.fastq.gz") 
                 fq_paths = glob.glob(os.path.abspath(fq_paths))
+                fq_paths = sorted(fq_paths)
 
                 if fq_paths:
                     [path_list.append(x) for x in fq_paths]
@@ -44,7 +45,7 @@ rule merge_fastqs:
             if not path_list:
                 sys.exit("ERROR: No fastqs found for " + sample + ".") 
                           
-            return path_list
+            return sorted(path_list)
 
         # Function to build merge command
         def _build_merge_cmd(path_list, merged_path):
