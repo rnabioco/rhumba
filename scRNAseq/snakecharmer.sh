@@ -10,7 +10,7 @@ mkdir -p logs
 
 . /usr/share/Modules/init/bash
 module load modules modules-init modules-python
-module load cellranger/3.0.2
+module load cellranger
 
 args=' 
   -q rna 
