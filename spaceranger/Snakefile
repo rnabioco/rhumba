@@ -1,0 +1,95 @@
+# ===== Pipeline for running cellranger ========================================
+
+
+# Configure shell for all rules 
+shell.executable("/bin/bash")
+shell.prefix("set -o nounset -o pipefail -o errexit -x; ")
+import subprocess
+import shutil
+import glob
+import os 
+import re
+
+
+
+# Parameters from config.yaml
+DATA         = config["DATA"]
+RESULTS      = config["RESULTS"]
+SAMPLES      = config["SAMPLES"]
+GROUPS       = config["GROUPS"]
+IMAGES       = config["IMAGES"]
+SLIDE        = config["SLIDE"]
+AREA         = config["AREA"]
+GENOME       = config["GENOME"]
+MAX_JOBS     = config["MAX_JOBS"]
+LSF_TEMPLATE = config["LSF_TEMPLATE"]
+
+
+
+# Function to check paths for input files/directories
+def _check_path(path):
+    if os.path.exists(path):
+        return os.path.abspath(path)
+    else:
+        sys.exit("ERROR: " + path + " does not exist.")
+
+
+
+# Set sample/group names
+if GROUPS:
+    GROUPS = [re.sub(" ", "", x) for x in GROUPS]
+    GROUPS = [re.sub(",", "-", x) for x in GROUPS]
+
+
+
+# Check directory/file paths
+DATA    = _check_path(DATA)
+RESULTS = _check_path(RESULTS)
+GENOME  = _check_path(GENOME)
+
+if LSF_TEMPLATE:
+    LSF_TEMPLATE = _check_path(LSF_TEMPLATE)
+else:
+    LSF_TEMPLATE = "lsf"
+
+
+
+# Slide attributes
+if len(IMAGES) != len(SAMPLES):
+    sys.exit("ERROR: Must provide a slide image for each sample.")
+
+IMAGES = [DATA + "/" + x for x in IMAGES]
+IMAGES = [_check_path(x) for x in IMAGES]
+IMAGES = dict(zip(SAMPLES, IMAGES))
+
+if (len(SLIDE) != len(SAMPLES)) & (len(SLIDE) != 1):
+    sys.exit("ERROR: Must provide a single slide serial number or a serial number for each sample.")
+
+if len(SLIDE) == 1:
+    SLIDE = [SLIDE] * len(SAMPLES)
+
+SLIDE = dict(zip(SAMPLES, SLIDE))
+
+if len(AREA) != len(SAMPLES):
+    sys.exit("ERROR: Must provide a slide area for each sample.")
+
+AREA  = dict(zip(SAMPLES, AREA))
+
+
+
+# Final output files
+rule all:
+    input:
+        expand(
+            "{results}/{sample}/outs/{sample}.html",
+            results = RESULTS, sample = SAMPLES
+        ),
+        expand(
+            "{results}/logs/{group}_aggr.out",
+            results = RESULTS, group = GROUPS
+        )
+
+include: "src/rules/spaceranger.snake"
+
+
+

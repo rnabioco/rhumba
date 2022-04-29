@@ -1,0 +1,134 @@
+# ===== Snakemake rules for running the 10x Space Ranger pipeline ==============
+
+
+# Run spaceranger count ========================================================
+# This rule runs spaceranger count using csv files from create_sample_csv and 
+# create_ab_csv.
+
+rule spaceranger_count:
+    output:
+        "{results}/{sample}/outs/{sample}.html"
+    params:
+        job_name = "count",
+        memory   = "select[mem>4] rusage[mem=4]",
+        data     = DATA,
+        image    = lambda wildcards: IMAGES[wildcards.sample],
+        slide    = lambda wildcards: SLIDE[wildcards.sample],
+        area     = lambda wildcards: AREA[wildcards.sample],
+        genome   = GENOME,
+        max_jobs = MAX_JOBS,
+        lsf      = LSF_TEMPLATE
+    log:
+        "{results}/logs/{sample}_count"
+    threads:
+        1
+    shell:
+        """
+        # Snakemake will preemptively create the output directories. This
+        # causes spaceranger to try to resume a pipestance and error.
+        cd "{wildcards.results}"
+
+        rmdir -p "{wildcards.sample}/outs"
+
+        spaceranger count \
+            --id="{wildcards.sample}" \
+            --fastqs="{params.data}" \
+            --sample="{wildcards.sample}" \
+            --image="{params.image}" \
+            --slide="{params.slide}" \
+            --area="{params.area}" \
+            --transcriptome="{params.genome}" \
+            --jobmode="{params.lsf}" \
+            --maxjobs={params.max_jobs}
+
+        out=$(dirname {output})
+
+        cp $out/web_summary.html {output}
+        """
+
+
+
+# Run spaceranger aggr =========================================================
+# This rule creates a csv file containing the sample names and the path to each 
+# molecule_info.h5 file and runs spaceranger aggr.
+
+rule spaceranger_aggr:
+    input:
+        expand(
+            "{results}/{sample}/outs/{sample}.html",
+            results = RESULTS, sample = SAMPLES
+        )
+    output:
+        "{results}/logs/{group}_aggr.out"
+    params:
+        job_name = "aggr",
+        memory   = "select[mem>4] rusage[mem=4]",
+        results  = RESULTS,
+        samples  = SAMPLES,
+        groups   = GROUPS,
+        max_jobs = MAX_JOBS,
+        lsf      = LSF_TEMPLATE
+    log:
+        "{results}/logs/{group}_aggr"
+    threads:
+        1
+    run:
+        # Run spaceranger aggr
+        if params.groups:
+            samples  = ",".join(params.samples)
+            grp_nms  = wildcards.group.split("-")
+            grp_sams = [re.findall(x, samples) for x in grp_nms]
+            
+            # Check that all group samples are in SAMPLES
+            def _check_value(name, val):
+                if not val:
+                    sys.exit("ERROR: Unable to find " + name + " in SAMPLES.")
+                elif len(val) > 1:
+                    sys.exit("ERROR: Multiple matches for " + name + " were found in SAMPLES.")
+
+            [_check_value(x, y) for x, y in zip(grp_nms, grp_sams)]
+
+            grp_sams = ["".join(x) for x in grp_sams]
+
+            # Check for aggr csv
+            aggr_csv = os.path.join(params.results, wildcards.group + "_aggr.csv")
+    
+            if not os.path.isfile(aggr_csv):
+                with open(aggr_csv, "w") as csv:
+                    csv.write("library_id,molecule_h5,cloupe_file\n")
+
+            # Append sample info to aggr csv
+            with open(aggr_csv, "a") as csv:
+                for sample in grp_sams:
+                    sam_path = os.path.join(params.results, sample, "outs")
+                    h5_path  = sam_path + "/molecule_info.h5"
+                    lpe_path = sam_path + "/cloupe.cloupe"
+                    csv.write("%s,%s,%s\n" % (sample, h5_path, lpe_path))
+
+            # Run spaceranger aggr
+            # --id="{wildcards.group}" \
+            shell(
+                """
+                aggr_csv="{wildcards.group}_aggr.csv"
+
+                cd "{params.results}"
+                spaceranger aggr \
+                    --id="aggr_all" \
+                    --csv="$aggr_csv" \
+                    --jobmode="{params.lsf}" \
+                    --maxjobs={params.max_jobs} \
+                    --normalize=none
+                """
+            )
+
+            # Add sample names for output files
+            group   = wildcards.group
+            out_dir = os.path.join(params.results, group, "outs/")
+
+            #shutil.copyfile(out_dir + "web_summary.html", out_dir + group + ".html")
+        
+        # Write output file
+        with open(output[0], "w") as out:
+            out.write("done\n")
+
+

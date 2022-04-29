@@ -1,0 +1,62 @@
+# ==== Config file for running the 10x spaceranger pipeline ====================
+
+
+# Path to the fastq directory, multiple directories can be given.
+DATA:
+    "/beevol/home/kaufmanm/projects/foreman-medulloblastoma-22-03/raw_data"
+
+# Path to the output directory.
+RESULTS:
+    "/beevol/home/kaufmanm/projects/foreman-medulloblastoma-22-03/spaceranger_outs"
+
+# Sample names for gene expression fastqs. If the same libraries were
+# sequenced multiple times, just include all the fastq directories in tcat he
+# RAW_DATA list and make sure the fastqs from all runs begin with the
+# sample name. If gene expression fastqs are not being processed, leave
+# this blank.
+SAMPLES:
+    - "A_934"
+    - "B_1028"
+    - "C_1235"
+    - "D_1355"
+
+# Images to use for each sample listed above:
+IMAGES:
+    - "A_934_TD_p00_0_A01f00d4.TIF"
+    - "B_1028_TD_p00_0_B01f00d4.TIF"
+    - "C_1235_TD_p00_0_C01f00d4.TIF"
+    - "D_1355_TD_p00_0_D01f00d4.TIF"
+
+# Sample groups that should be used with cellranger aggr. Include the gene
+# expression names separated by commas for samples that should be
+# aggregated together. If only ADT fastqs are being processed, list the
+# ADT names. Include multiple entries if multiple groups of samples are
+# being aggregated. Leave blank to skip this step.
+GROUPS:
+    - "A_934,B_1028,C_1235,D_1355"
+
+# Visium slide serial number for each sample. If a single value is provided, 
+# this serial number will be used for all samples
+SLIDE:
+    - "V11A07-123"
+ 
+# Visium capture area identifier for each sample. Options include A1, B1, C1,
+# or D1.
+AREA:
+    - "A1"
+    - "B1"
+    - "C1"
+    - "D1"
+
+# Path to the Cell Ranger genome reference.
+GENOME:
+    "/beevol/home/rbilab/ref/cellranger/human/refdata-cellranger-GRCh38-3.0.0"
+
+# Maximum number of jobs per sample that can be submitted by Cell Ranger
+# at a time.
+MAX_JOBS:
+    24
+
+# Path to an LSF template, this is optional.
+LSF_TEMPLATE:
+    src/lsf.template
