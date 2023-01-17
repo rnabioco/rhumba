@@ -1,0 +1,127 @@
+# rules for the rmats turbo snakemake pipeline
+
+if CONTAINER_TYPE == "singularity":
+    shell_cmd = """
+    singularity run --bind /data:/data /data/containers/rmats.sif \
+        --b1 {input.b1} \
+        --b2 {input.b2} \
+        --gtf {input.gtf} \
+        --od {output} \
+        --readLength 150 \
+        --tstat 1 \
+        --libType fr-unstranded \
+        --nthread {threads} \
+        --variable-read-length \
+        --novelSS \
+        --bi \
+        --statoff \
+        --tmp {params.tmp} \
+        --verbose
+    """
+elif CONTAINER_TYPE == "docker":
+    shell_cmd = """
+    docker run --rm -v --image rnabioco/rmats-turbo \
+    --gtf \
+    --b1 \
+    --b2 \
+    --nthreads {params.max_jobs} \
+    --od {params.results}
+        """
+
+# rule: rmats
+rule rmats:
+    output:
+        expand(
+            "{result_path}/{comparison_names}_splicing_results.xlsx",
+            result_path=RESULT_PATH,
+            comparison_names=COMPARISON_NAMES,
+        ),
+        expand(
+            "{result_path}/{comparison_names}",
+            result_path=RESULT_PATH,
+            comparison_names=COMPARISON_NAMES,
+        ),
+    params:
+        job_name = "rmats_{wildcard.comparison_names}",
+        memory="select[mem>50] rusage[mem=50]",
+        max_jobs=THREADS,
+        lsf=LSF_TEMPLATE,
+        results=RESULT_PATH,
+    threads: 1
+    shell:
+        shell_cmd
+
+
+# usage: rmats.py [options]
+# optional arguments:
+#   -h, --help            show this help message and exit
+#   --version             show program's version number and exit
+#   --gtf GTF             An annotation of genes and transcripts in GTF format
+#   --b1 B1               A text file containing a comma separated list of the
+#                         BAM files for sample_1. (Only if using BAM)
+#   --b2 B2               A text file containing a comma separated list of the
+#                         BAM files for sample_2. (Only if using BAM)
+#   --s1 S1               A text file containing a comma separated list of the
+#                         FASTQ files for sample_1. If using paired reads the
+#                         format is ":" to separate pairs and "," to separate
+#                         replicates. (Only if using fastq)
+#   --s2 S2               A text file containing a comma separated list of the
+#                         FASTQ files for sample_2. If using paired reads the
+#                         format is ":" to separate pairs and "," to separate
+#                         replicates. (Only if using fastq)
+#   --od OD               The directory for final output from the post step
+#   --tmp TMP             The directory for intermediate output such as ".rmats"
+#                         files from the prep step
+#   -t {paired,single}    Type of read used in the analysis: either "paired" for
+#                         paired-end data or "single" for single-end data.
+#                         Default: paired
+#   --libType {fr-unstranded,fr-firststrand,fr-secondstrand}
+#                         Library type. Use fr-firststrand or fr-secondstrand
+#                         for strand-specific data. Default: fr-unstranded
+#   --readLength READLENGTH
+#                         The length of each read
+#   --variable-read-length
+#                         Allow reads with lengths that differ from --readLength
+#                         to be processed. --readLength will still be used to
+#                         determine IncFormLen and SkipFormLen
+#   --anchorLength ANCHORLENGTH
+#                         The anchor length. Default is 1
+#   --tophatAnchor TOPHATANCHOR
+#                         The "anchor length" or "overhang length" used in the
+#                         aligner. At least "anchor length" NT must be mapped to
+#                         each end of a given junction. The default is 6. (Only
+#                         if using fastq)
+#   --bi BINDEX           The directory name of the STAR binary indices (name of
+#                         the directory that contains the SA file). (Only if
+#                         using fastq)
+#   --nthread NTHREAD     The number of threads. The optimal number of threads
+#                         should be equal to the number of CPU cores. Default: 1
+#   --tstat TSTAT         The number of threads for the statistical model. If
+#                         not set then the value of --nthread is used
+#   --cstat CSTAT         The cutoff splicing difference. The cutoff used in the
+#                         null hypothesis test for differential splicing. The
+#                         default is 0.0001 for 0.01% difference. Valid: 0 <=
+#                         cutoff < 1. Does not apply to the paired stats model
+#   --task {prep,post,both,inte,stat}
+#                         Specify which step(s) of rMATS to run. Default: both.
+#                         prep: preprocess BAMs and generate a .rmats file.
+#                         post: load .rmats file(s) into memory, detect and
+#                         count alternative splicing events, and calculate P
+#                         value (if not --statoff). both: prep + post. inte
+#                         (integrity): check that the BAM filenames recorded by
+#                         the prep task(s) match the BAM filenames for the
+#                         current command line. stat: run statistical test on
+#                         existing output files
+#   --statoff             Skip the statistical analysis
+#   --paired-stats        Use the paired stats model
+#   --novelSS             Enable detection of novel splice sites (unannotated
+#                         splice sites). Default is no detection of novel splice
+#                         sites
+#   --mil MIL             Minimum Intron Length. Only impacts --novelSS
+#                         behavior. Default: 50
+#   --mel MEL             Maximum Exon Length. Only impacts --novelSS behavior.
+#                         Default: 500
+#   --allow-clipping      Allow alignments with soft or hard clipping to be used
+#   --fixed-event-set FIXED_EVENT_SET
+#                         A directory containing fromGTF.[AS].txt files to be
+#                         used instead of detecting a new set of events

@@ -1,0 +1,1 @@
+/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_3_sorted.bam"

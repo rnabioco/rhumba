@@ -1,0 +1,99 @@
+#                ______  ______  ____        ______  __  __  ____    ____     _____
+#        /'\_/`\/\  _  \/\__  _\/\  _`\     /\__  _\/\ \/\ \/\  _`\ /\  _`\  /\  __`\
+#  _ __ /\      \ \ \L\ \/_/\ \/\ \,\L\_\   \/_/\ \/\ \ \ \ \ \ \L\ \ \ \L\ \\ \ \/\ \
+# /\`'__\ \ \__\ \ \  __ \ \ \ \ \/_\__ \      \ \ \ \ \ \ \ \ \ ,  /\ \  _ <'\ \ \ \ \
+# \ \ \/ \ \ \_/\ \ \ \/\ \ \ \ \  /\ \L\ \     \ \ \ \ \ \_\ \ \ \\ \\ \ \L\ \\ \ \_\ \
+#  \ \_\  \ \_\\ \_\ \_\ \_\ \ \_\ \ `\____\     \ \_\ \ \_____\ \_\ \_\ \____/ \ \_____\
+#   \/_/   \/_/ \/_/\/_/\/_/  \/_/  \/_____/      \/_/  \/_____/\/_/\/ /\/___/   \/_____/
+
+
+#  ____                        ___
+# /\  _`\   __                /\_ \    __
+# \ \ \L\ \/\_\  _____      __\//\ \  /\_\    ___      __
+#  \ \ ,__/\/\ \/\ '__`\  /'__`\\ \ \ \/\ \ /' _ `\  /'__`\
+#   \ \ \/  \ \ \ \ \L\ \/\  __/ \_\ \_\ \ \/\ \/\ \/\  __/
+#    \ \_\   \ \_\ \ ,__/\ \____\/\____\\ \_\ \_\ \_\ \____\
+#     \/_/    \/_/\ \ \/  \/____/\/____/ \/_/\/_/\/_/\/____/
+#                  \ \_\
+#                   \/_/
+
+
+# Configure shell for all rules
+shell.executable("/bin/bash")
+shell.prefix("set -o nounset -o pipefail -o errexit -x; ")
+
+# Python imports
+import subprocess
+import shutil
+import glob
+import os
+import re
+
+# Parameters from config.yaml
+SAMPLES = config["SAMPLES"]
+COMPARISONS = config["COMPARISONS"]
+DATA_PATHS = config["DATA_PATHS"]
+DATA_TYPE = config["DATA_TYPE"]
+GTF_PATH = config["GTF_PATH"]
+STAR_INDEX = config["STAR_INDEX"]
+READ_LENGTH = config["READ_LENGTH"]
+READ_TYPE = config["READ_TYPE"]
+LIB_TYPE = config["LIB_TYPE"]
+THREADS = config["THREADS"]
+TEMP_DIR = config["TEMP_DIR"]
+RESULT_PATH = config["RESULT_PATH"]
+CONTAINER_TYPE = config["CONTAINER_TYPE"]
+LSF_TEMPLATE = config["LSF_TEMPLATE"]
+
+# check for lsf_template
+if LSF_TEMPLATE:
+    LSF_TEMPLATE = LSF_TEMPLATE
+else:
+    LSF_TEMPLATE = "lsf"
+
+# Get comparison names
+COMPARISON_NAMES = []
+for comparison in COMPARISONS:
+    split = comparison.split()
+    COMPARISON_NAMES.append(split[0].strip(",") + "_vs_" + split[1].strip(","))
+
+# Create temporary directory
+if not os.path.exists(os.path.abspath(TEMP_DIR)):
+    os.makedirs(os.path.abspath(TEMP_DIR))
+
+# Create txt files for loading comparisons to rMATs
+if len(SAMPLES) == len(DATA_PATHS):
+    for sample, paths in zip(SAMPLES, DATA_PATHS):
+        with open(TEMP_DIR + "/" + sample + ".txt", "w") as f:
+            f.write(paths + "\n")
+else:
+    sys.exit("ERROR: Number of samples does not match number of data paths.")
+
+# Get appropriate container type
+if CONTAINER_TYPE == "singularity":
+    os.system(
+        "singularity pull docker://rnabioco/rmats-turbo" + TEMP_DIR + "/rmats-turbo.sif"
+    )
+
+elif CONTAINER_TYPE == "docker":
+    os.system("docker pull rnabioco/rmats-turbo")
+
+# Rule to check final outputs
+rule all:
+    input:
+        expand(
+            "{result_path}/{comparison_names}_splicing_results.xlsx",
+            result_path=RESULT_PATH,
+            comparison_names=COMPARISON_NAMES,
+        ),
+        expand(
+            "{result_path}/{comparison_names}",
+            result_path=RESULT_PATH,
+            comparison_names=COMPARISON_NAMES,
+        ),
+
+include: "rules/rmats.snake"
+
+onsuccess:
+    shell("date '+%d/%m/%Y %H:%M:%S' > rmats_completed.txt") 
+    shell("rm -rf" + TEMP_DIR)

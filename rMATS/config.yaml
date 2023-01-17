@@ -1,0 +1,63 @@
+# Configuration file for the rMATS Turbo snakemake pipeline
+
+# Sample names
+SAMPLES:
+    - "siCTL"
+    - "siCTL_DOX"
+
+# Paiwise comparisons
+COMPARISONS:
+    - "siCTL, siCTL_DOX"
+    - "siCTL_DOX, siCTL"
+# Path to the BAM files or FASTQ files
+# a comma separated list of file paths corresponding to each sample
+# maintain the same order as the sample list above
+DATA_PATHS:
+    #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_1/siCTL_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_2/siCTL_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_3/siCTL_3_sorted.bam"
+    #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_1/siCTL_DOX_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_2/siCTL_DOX_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_3/siCTL_DOX_3_sorted.bam"
+    - /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_3_sorted.bam"
+    - "/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_3_sorted.bam"
+
+# Type of data: either "bam" for BAM files or "fastq" for FASTQ files.
+DATA_TYPE:
+    "bam"
+
+# Path to GTF file, an annotation of genes and transcripts
+GTF_PATH:
+    #"/beevol/home/kaufmanm/projects/jagannathan-srsf8/refs/annotation/gencode.v37.annotation.gtf"
+    "/Users/mkaufman/RBI/jagannathan-srsf8/gtf/gencode.v37.annotation.gtf"
+# Path to the STAR binary indices that contains the SA file. (ONLY IF USING FASTQ)
+STAR_INDEX:
+    ""
+
+# Length of each read
+READ_LENGTH:
+    "150"
+
+# Type of read used in the analysis: either "paired" for paired-end data or "single" for single-end data.
+READ_TYPE:
+    "paired"
+
+# Library type. Use fr-firststrand or fr-secondstrand for strand-specific data. Default: fr-unstranded
+LIB_TYPE:
+    "fr-unstranded"
+
+# Number of threads to use for computation.
+THREADS:
+    "4"
+
+# Path to store intermediate files
+TEMP_DIR:
+    "temp"
+
+# Path to the output directory
+RESULT_PATH:
+    "results"
+
+# Container type, either singularity or docker
+CONTAINER_TYPE:
+    "docker"
+
+# Path to an LSF template.
+LSF_TEMPLATE:
+    src/lsf.template
