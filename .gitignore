@@ -3,3 +3,6 @@
 
 # Snakemake
 **/.snakemake/
+
+# Subfolder Specific
+/rMATS/temp/
