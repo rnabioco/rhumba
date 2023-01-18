@@ -9,13 +9,14 @@ SAMPLES:
 COMPARISONS:
     - "siCTL, siCTL_DOX"
     - "siCTL_DOX, siCTL"
+
 # Path to the BAM files or FASTQ files
 # a comma separated list of file paths corresponding to each sample
 # maintain the same order as the sample list above
 DATA_PATHS:
     #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_1/siCTL_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_2/siCTL_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_3/siCTL_3_sorted.bam"
     #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_1/siCTL_DOX_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_2/siCTL_DOX_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_3/siCTL_DOX_3_sorted.bam"
-    - /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_3_sorted.bam"
+    - "/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_3_sorted.bam"
     - "/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_3_sorted.bam"
 
 # Type of data: either "bam" for BAM files or "fastq" for FASTQ files.
@@ -26,6 +27,7 @@ DATA_TYPE:
 GTF_PATH:
     #"/beevol/home/kaufmanm/projects/jagannathan-srsf8/refs/annotation/gencode.v37.annotation.gtf"
     "/Users/mkaufman/RBI/jagannathan-srsf8/gtf/gencode.v37.annotation.gtf"
+
 # Path to the STAR binary indices that contains the SA file. (ONLY IF USING FASTQ)
 STAR_INDEX:
     ""

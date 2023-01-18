@@ -47,10 +47,11 @@ rule rmats:
         max_jobs=THREADS,
         lsf=LSF_TEMPLATE,
         results=RESULT_PATH,
+        
+
     threads: 1
     shell:
         shell_cmd
-
 
 # usage: rmats.py [options]
 # optional arguments:
