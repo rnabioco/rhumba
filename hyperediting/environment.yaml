@@ -1,0 +1,13 @@
+name: hyperediting
+channels:
+  - conda-forge
+  - bioconda
+
+dependencies:
+  - python =3.8  
+  - snakemake =6.1.2
+  - scipy =1.6.2
+  - drmaa =0.7.9
+  - pysam =0.16.*
+  - bwa =0.7.17
+

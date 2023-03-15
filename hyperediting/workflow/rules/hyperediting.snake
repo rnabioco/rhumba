@@ -1,0 +1,309 @@
+""" rules for detecting hyperedited regions """ 
+
+def get_mated_bam(wildcards):
+  read = wildcards.read
+  if read == "1":
+    opp_read = "2"
+  else:
+    opp_read = "1"
+  
+  fq_ref = comp(wildcards.ref)
+  fq_alt = comp(wildcards.alt)
+
+  outbam = os.path.join(wildcards.data,
+                     "bwa",
+                     wildcards.fastq + "_" + opp_read + "_" +
+                     fq_ref + "to" + fq_alt + "_gnome" +
+                     wildcards.c_ref + "to" + wildcards.c_alt + ".bam")
+  return outbam
+
+def _get_original_bam(wildcards):
+  unmapped_fq_path = os.path.join(RAW_DATA, wildcards.fastq)
+  bam_path = unmapped_fq_path + BAM_SUFFIX
+  return bam_path
+
+#rule count_alleles_hyperediting:
+#  """
+#  count alleles for each hyperedited site
+#  from star aligned data to compute
+#  allelic frequencies.
+#  input vcf file produced from edits-hyperediting.Rmd locally
+#  """
+#  input:
+#    variants = "{data}/hyperedits/hyperedited_sites.vcf",
+#    bam = "{data}/star/{fastq}_split.bam"
+#  output:
+#    "{data}/hyperedits/site_counts/A_G_counts/{fastq}_counts.txt.gz"
+#  params:
+#    job_name = "count_alleles",
+#    memory = "select[mem>4] rusage[mem=4]",
+#  log:
+#    "{data}/hyperedits/logs/allele_counts/{fastq}_counts.txt"
+#  message:
+#    "recount allele depth with pysam"
+#  threads:
+#    5
+#  resources: all_threads=5
+#  shell:
+#    """
+#    python3 {LIB}/get_pileup.py \
+#      -t {threads} \
+#      -b {input.bam} \
+#      -v {input.variants} \
+#      -q 20 \
+#      -p 6 \
+#     | gzip > {output}
+#    """
+#
+#  
+#rule filter_edits:
+#  """
+#  only keep hyperediting sites supported by 2 reads and
+#  parse out just A-to-G type. 
+#  """
+#  input:
+#    expand(expand(DATA + "/hyperedits/{{tissue}}/bed/{{type}}/filtered/{ref}_to_{alt}/{{fastq}}_{{read}}_{f_ref}to{f_alt}_gnome{c_ref}to{c_alt}.bed",
+#      zip, 
+#      ref = POS_REF*4, 
+#      alt = POS_ALT*4, 
+#      f_ref = POS_REF*2 + C_POS*2, 
+#      f_alt = POS_ALT*2 + C_ALT*2, 
+#      c_ref = (C_POS + POS_REF)*2, 
+#      c_alt= (C_ALT + POS_ALT)*2), 
+#      fastq=FASTQ, 
+#      tissue = TISSUE,
+#      type = ["edits", "reads"], 
+#      read = ["1", "2"]),
+#  output:
+#    variants = "{data}/hyperedits/hyperedited_sites.vcf",
+#    bed = "{data}/hyperedits/hyperedited_sites.bed",
+#  params:
+#    data_dir = "{data}",
+#    job_name = "filter_hyperedits",
+#    memory = "select[mem>5] rusage[mem=5]",
+#  log:
+#    "{data}/hyperedits/logs/filter_edits.txt"    
+#  resources: all_threads = 1
+#  message: "filtering hyperedits"
+#  shell:
+#    """
+#    Rscript {LIB}/filter_hyperedits.R \
+#      {params.data_dir}
+#    """
+
+def _gather_input_files(wildcards):
+  fq_path = os.path.join(RAW_DATA, wildcards.fastq)
+  fq_path = fq_path + FASTQ_SUFFIX["R" + wildcards.read]
+  return fq_path
+
+rule filter_reads:
+  input:
+    _gather_input_files 
+  output:
+    "{data}/fastq/{fastq}_filtered.{read}.fastq.gz",
+  params:
+    job_name = "clean_reads",
+    rpt_db = config["SIMPLE_REPEATS"], 
+    memory = "select[mem>4] rusage[mem=4]",
+  #conda:
+  #  "../envs/python.yaml"
+  log:
+    stdout = "{data}/logs/filter_reads/{fastq}_clean_reads_{read}.out",
+    stderr = "{data}/logs/filter_reads/{fastq}_clean_reads_{read}.err",
+  message:
+    "cleaning reads from {wildcards.fastq} to remove likely sequencing errors" 
+  resources: all_threads = 1
+  shell:
+    """
+    python {LIB}/filter_reads.py \
+       -i {input} \
+       -r {params.rpt_db} \
+       -o {output}  \
+       -m "R{wildcards.read}"
+    """
+
+
+rule change_a_to_g:
+  input:
+    rules.filter_reads.output
+  output:
+    temp("{data}/fastq/{fastq}_filtered_{ref}to{alt}.{read}.fastq.gz"),
+  params:
+    job_name = "convert_reads",
+    memory = "select[mem>4] rusage[mem=4]",
+  log:
+    stdout = "{data}/logs/convert_reads/{fastq}_{ref}_{alt}_{read}.out",
+    stderr = "{data}/logs/convert_reads/{fastq}_{ref}_{alt}_{read}.err"
+  message:
+    " append original read to name and convert {wildcards.ref} to {wildcards.alt} "
+  threads: 2 # for gzip
+  resources: all_threads = 2
+  shell:
+    """
+    {LIB}/append_read_to_name {input} > {output}.tmp
+     
+    {LIB}/change_nt {wildcards.ref} {wildcards.alt} {output}.tmp \
+      | gzip > {output}
+    rm -f {output}.tmp
+    """
+
+rule change_a_to_g_genome:
+  input:
+    {GENOME}
+  output:
+    BWA_IDX + "/genome_{ref}to{alt}.fasta",
+  params:
+    job_name = "change_a_to_g",
+    memory = "select[mem>4] rusage[mem=4]",
+  log:
+    stdout = BWA_IDX + "/logs/convert_genome/convert_fastq_{ref}_{alt}.out",
+    stderr = BWA_IDX + "/logs/convert_genome/convert_fastq_{ref}_{alt}.err",
+  resources: all_threads = 1 
+  shell:
+    """
+    {LIB}/change_nt {wildcards.ref} {wildcards.alt} {input} > {output}
+    """
+
+rule bwa_idx:
+  input:
+     rules.change_a_to_g_genome.output
+  output:
+    BWA_IDX + "/genome_{ref}to{alt}.fasta.bwt",
+  params:
+    job_name = "bwa_idx",
+    memory = "select[mem>10] rusage[mem=10]",
+  log:
+    stdout = BWA_IDX + "/logs/convert_genome/bwa_idx_{ref}_{alt}.out",
+    stderr = BWA_IDX + "/logs/convert_genome/bwa_idx_{ref}_{alt}.err",
+  resources: all_threads = 1 
+  message:
+    "building bwa index "
+  shell:
+    """
+    bwa index {input}
+    """
+
+
+rule run_bwa:
+  input:
+     fq = rules.change_a_to_g.output,
+     idx = BWA_IDX + "/genome_{c_ref}to{c_alt}.fasta.bwt",
+     fa = BWA_IDX + "/genome_{c_ref}to{c_alt}.fasta",
+  output:
+     temp("{data}/bwa/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.sai"),
+  params:
+    job_name = "bwa_run",
+    memory = "select[mem>5] rusage[mem=5]",
+  log:
+     stdout = "{data}/logs/bwa/{fastq}_{read}_{ref}{alt}_{c_ref}{c_alt}_align.out",
+     stderr = "{data}/logs/bwa/{fastq}_{read}_{ref}{alt}_{c_ref}{c_alt}_align.err",
+  threads: 6
+  resources: all_threads = 6 
+  message:
+    """running bwa on reads {wildcards.ref}to{wildcards.alt} against genome
+    {wildcards.c_ref}to{wildcards.c_alt}"""
+  shell:
+    """
+    bwa aln \
+      -t {threads} \
+      -n 2 \
+      -o 0 \
+      -N \
+      {input.fa} \
+      {input.fq} \
+      -f {output}
+    """
+
+rule make_bwa_bams:
+  input:
+     fq = rules.change_a_to_g.output,
+     sa = rules.run_bwa.output,
+     fa = BWA_IDX + "/genome_{c_ref}to{c_alt}.fasta" 
+  output:
+     bam = "{data}/bwa/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bam",
+     idx = "{data}/bwa/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bam.bai",
+  params:
+    job_name = "bwa_bam",
+    memory = "select[mem>10] rusage[mem=10]",
+  log:
+    stdout = "{data}/logs/bwa/{fastq}_{read}_{ref}{alt}_{c_ref}{c_alt}_bamout.out",
+    stderr = "{data}/logs/bwa/{fastq}_{read}_{ref}{alt}_{c_ref}{c_alt}_bamout.err",
+  resources: all_threads = 1 
+  message:
+    "making bams"
+  shell:
+    """
+    bwa samse \
+      -n 50 \
+      {input.fa} \
+      {input.sa} \
+      {input.fq} \
+    | samtools view \
+      -bS \
+      -F 4 - \
+    | samtools sort > {output.bam}
+     
+    samtools index {output.bam}
+    """
+
+
+rule find_edits:
+  input:
+    bam = rules.make_bwa_bams.output.bam,
+    idx = rules.make_bwa_bams.output.idx,
+  output:
+    edits = "{data}/bed/edits/{r,[ATCG]}_to_{a,[ATCG]}/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bed",
+    reads = "{data}/bed/reads/{r,[ATCG]}_to_{a,[ATCG]}/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bed",
+  params:
+    libtype = LIB_TYPE,
+    job_name = "filter_bed.{fastq}",
+    memory = "select[mem>5] rusage[mem=5]",
+  log:
+    stdout = "{data}/logs/find_edits/{fastq}_{read}_{r}{a}{c_ref}{c_alt}filter{ref}_{alt}.out",
+    stderr = "{data}/logs/find_edits/{fastq}_{read}_{r}{a}{c_ref}{c_alt}filter{ref}_{alt}.err",
+  resources: all_threads = 1 
+  message:
+    "filtering edits"
+  shell:
+    """
+    python {LIB}/filter_bam.py \
+      -f {GENOME} \
+      -b {input.bam} \
+      -e {output.edits} \
+      -r {output.reads} \
+      -s "R{wildcards.read}" \
+      -l {params.libtype} \
+      -a {wildcards.r} {wildcards.a}
+    """
+
+rule keep_paired_edits:
+  input: 
+    edits = rules.find_edits.output.edits,
+    reads = rules.find_edits.output.reads,
+    opp_bam = get_mated_bam,
+    og_bam = _get_original_bam
+  output:
+    edits = "{data}/bed_filtered/edits/{r,[ATCG]}_to_{a,[ATCG]}/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bed",
+    reads = "{data}/bed_filtered/reads/{r,[ATCG]}_to_{a,[ATCG]}/{fastq}_{read}_{ref}to{alt}_gnome{c_ref}to{c_alt}.bed",
+  params:
+    job_name = "check_paired_end_reads",
+    memory = "select[mem>10] rusage[mem=10]",
+  log:
+     stdout = "{data}/logs/bed_filtered/{fastq}_{read}_{r}_{a}_{ref}to{alt}_{c_ref}to{c_alt}_{read}_check_pe.out",
+     stderr = "{data}/logs/bed_filtered/{fastq}_{read}_{r}_{a}_{ref}to{alt}_{c_ref}to{c_alt}_{read}_check_pe.err",
+  resources: all_threads = 1 
+  message:
+    "check pe distance"
+  shell:
+    """
+    python {LIB}/check_paired_end_distance.py \
+      -b {input.opp_bam} \
+      -ob {input.og_bam} \
+      -r {input.reads} \
+      -e {input.edits} \
+      -R {output.reads} \
+      -E {output.edits} 
+
+    """
+
+

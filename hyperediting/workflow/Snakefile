@@ -1,0 +1,60 @@
+""" Snakemake pipeline for RNA editing detection from RNA-Seq data """
+
+shell.executable("/bin/bash")
+import os
+from snakemake.utils import min_version
+
+min_version("4.3.0")
+
+configfile: "config/config_hyperediting.yaml"
+  
+DATA = config["DATA"]
+RAW_DATA = config["RAW_DATA"]
+LIB = config["LIB"]
+DBASES = "../../dbases"
+RESULTS = "../results"
+DOCS = "../docs"
+
+LIB_TYPE = config["LIBRARY_TYPE"]
+GENOME = config["GENOME"]
+BWA_IDX = config["BWA_IDX"]
+FASTQ = config["FASTQ"]
+FASTQ_SUFFIX = config["FASTQ_SUFFIX"]
+BAM_SUFFIX = config["BAM_SUFFIX"]
+POS_REF = config["pos_ref"]
+POS_ALT = config["pos_alt"]
+
+def comp(x):
+
+  bp_dict = {"A":"T",
+             "T":"A",
+             "G":"C",
+             "C":"G"}
+
+  return bp_dict[x]
+
+C_POS = [comp(x) for x in POS_REF]
+C_ALT = [comp(x) for x in POS_ALT]
+
+
+rule all:
+  input:
+    expand(BWA_IDX + "/genome_{ref}to{alt}.fasta.bwt",
+      zip, ref = POS_REF, alt = POS_ALT),
+    expand("{data}/fastq/{fastq}_filtered.{read}.fastq.gz",
+      data = DATA,
+      fastq = FASTQ,
+      read = ["1", "2"]),
+    expand(expand(DATA + "/bed_filtered/{{type}}/{r}_to_{a}/{{fastq}}_{{read}}_{f_ref}to{f_alt}_gnome{c_ref}to{c_alt}.bed",
+      zip, 
+      r = POS_REF*4,
+      a = POS_ALT*4,
+      f_ref = POS_REF*2 + C_POS*2, 
+      f_alt = POS_ALT*2 + C_ALT*2,
+      c_ref = (C_POS + POS_REF)*2, 
+      c_alt= (C_ALT + POS_ALT)*2), 
+      fastq=FASTQ, 
+      type = ["edits", "reads"], 
+      read = ["1", "2"]),
+
+include: "rules/hyperediting.snake"

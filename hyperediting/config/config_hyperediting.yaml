@@ -1,0 +1,62 @@
+# config for RNA hyperediting discovery snakemake pipeline 
+
+LIB:
+  "./workflow/scripts/"
+
+RAW_DATA:
+  "/path/to/star/directory"
+
+DATA: 
+  "/path/to/output/directory"
+
+GENOME:
+  "/path/to/genome.fa"
+
+SIMPLE_REPEATS:
+  "./dbases/unique_simple_repeats.txt"
+
+# one of fr-first-strand or fr-second-strand
+LIBRARY_TYPE:
+    - "fr-second-strand"
+
+FASTQ:
+    - "sample1"
+    - "sample2"
+
+# suffix added to FASTQ indicating unmapped fastqs in star directory
+FASTQ_SUFFIX:
+    R1: "_Unmapped.out.mate1.fastq.gz"
+    R2: "_Unmapped.out.mate2.fastq.gz"
+
+# suffix added to FASTQ indicating sorted bam output from STAR
+BAM_SUFFIX:
+    "_sorted.bam"
+
+# allele combinations to process
+pos_ref:
+  - A
+  - A
+  - A  
+  - G
+  - G
+  - G
+  - C
+  - C
+  - C
+  - T
+  - T
+  - T  
+
+pos_alt: 
+  - G 
+  - C 
+  - T
+  - A
+  - C
+  - T
+  - A
+  - G 
+  - T
+  - A
+  - G
+  - C
