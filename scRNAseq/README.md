@@ -7,7 +7,7 @@ cellranger count and aggregate pipelines on multiple samples.
 The cellranger software is available on `bodhi` as a module. 
 
 ```bash
-module load cellranger/3.0.2
+module load cellranger/7.1.0
 ```
 
 To run this pipeline on new data edit `config.yaml` to specify the following important parameters:
