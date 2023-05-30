@@ -15,7 +15,7 @@ def _collect_groups(wildcards):
     outdir = os.path.join(data, "results")
 
     out = open(groups[0] + "_groups_def.csv", 'w')
-    out.write("library_id,molecule_h5\n")
+    out.write("sample_id,molecule_h5\n") # recent cellranger changed to us sample_id instead of library_id
     for group in groups: 
         if group is "":
             continue
