@@ -1,0 +1,24 @@
+# Snakemake config file for Bru-Seq pipeline
+
+# input directory of raw fastq files
+# expected to be gzipped
+# and named in the format: {sample_name}_R{1,2}.fastq.gz
+input_dir: /beevol/home/kaufmanm/projects/glut1-bru-seq/data/raw/renamed
+
+# output directory for processed files
+output_dir: /beevol/home/kaufmanm/projects/glut1-bru-seq/data/processed
+
+# path to reference files in fasta format
+genome_fasta: /beevol/home/rbilab/ref/genome/human/GRCh38/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+
+# path to chrom sizes
+chrom_sizes: /beevol/home/kaufmanm/projects/glut1-bru-seq/ref/GRCh38.chrom_sizes.txt
+
+# path to annotation file
+gtf_file: /beevol/home/rbilab/ref/annotation/human/GRCh38/gtf/Homo_sapiens.GRCh38.95.gtf
+
+# path to star index directory
+star_index: /beevol/home/rbilab/ref/indices/star/human/GRCh38-gencode-v37-20201
+
+# list sample name prefixes here (e.g. NT_1, NT_2, etc.)
+samples: ['NT1', 'NT2', 'NT3', 'AS1', 'AS2', 'AS3', 'S1', 'S2', 'S3']

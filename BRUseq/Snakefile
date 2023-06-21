@@ -1,0 +1,156 @@
+# Global variables
+input_dir = config['input_dir']
+output_dir = config['output_dir']
+star_index = config['star_index']
+gtf_file = config['gtf_file']
+samples = config['samples']
+chrom_sizes = config['chrom_sizes']
+
+rule all:
+    input:
+        f"{output_dir}/counts/feature_counts_genes.tsv",
+        f"{output_dir}/qc/multiqc_report.html",
+        expand(f"{output_dir}/bigwigs/{{sample}}_pos.bw", sample=samples),
+        expand(f"{output_dir}/bigwigs/{{sample}}_neg.bw", sample=samples)
+
+rule qc:
+    input:
+        R1=f"{input_dir}/{{sample}}_R1.fastq.gz",
+        R2=f"{input_dir}/{{sample}}_R2.fastq.gz"
+    output:
+        html_R1=f"{output_dir}/qc/{{sample}}_R1_fastqc.html",
+        zip_R1=f"{output_dir}/qc/{{sample}}_R1_fastqc.zip",
+        html_R2=f"{output_dir}/qc/{{sample}}_R2_fastqc.html",
+        zip_R2=f"{output_dir}/qc/{{sample}}_R2_fastqc.zip"
+    params:
+        job_name=f"{{sample}}_qc",
+        memory="select[mem>2] rusage[mem=2]",
+        threads=8
+    shell:
+        """
+        fastqc {input.R1} -o {output_dir}/qc/
+        fastqc {input.R2} -o {output_dir}/qc/
+        """
+
+rule multiqc:
+    input:
+        expand(f"{output_dir}/qc/{{sample}}_R1_fastqc.zip", sample=samples),
+        expand(f"{output_dir}/qc/{{sample}}_R2_fastqc.zip", sample=samples)
+    output:
+        f"{output_dir}/qc/multiqc_report.html"
+    params:
+        job_name="multiqc",
+        memory="select[mem>2] rusage[mem=2]"
+    shell:
+        "multiqc {output_dir}/qc/ -o {output_dir}/qc/"
+
+rule trim:
+    input:
+        R1=f"{input_dir}/{{sample}}_R1.fastq.gz",
+        R2=f"{input_dir}/{{sample}}_R2.fastq.gz"
+    output:
+        trimmed_R1=f"{output_dir}/trimmed/{{sample}}_R1_trimmed.fastq.gz",
+        trimmed_R2=f"{output_dir}/trimmed/{{sample}}_R2_trimmed.fastq.gz",
+        report_json=f"{output_dir}/qc/{{sample}}_fastp.json",
+        report_html=f"{output_dir}/qc/{{sample}}_fastp.html"
+    params:
+        job_name=f"{{sample}}_trim",
+        memory="select[mem>8] rusage[mem=8]"
+    shell:
+        """
+        fastp -i {input.R1} -I {input.R2} -o {output.trimmed_R1} -O {output.trimmed_R2} \
+        -j {output.report_json} -h {output.report_html} --detect_adapter_for_pe
+        """
+
+rule align:
+    input:
+        R1=f"{output_dir}/trimmed/{{sample}}_R1_trimmed.fastq.gz",
+        R2=f"{output_dir}/trimmed/{{sample}}_R2_trimmed.fastq.gz",
+        index=star_index,
+        gtf=gtf_file
+    output:
+        f"{output_dir}/aligned/{{sample}}.Aligned.out.bam"
+    params:
+        job_name=f"{{sample}}_align",
+        memory="select[mem>100] rusage[mem=100]",
+        threads=32
+    shell:
+        """
+        STAR --runThreadN {params.threads} \
+        --genomeDir {input.index} \
+        --readFilesIn {input.R1} {input.R2} \
+        --readFilesCommand zcat \
+        --outSAMtype BAM Unsorted \
+        --outFileNamePrefix {output_dir}/aligned/{wildcards.sample}. \
+        --outBAMsortingThreadN {params.threads} \
+        --sjdbGTFfile {input.gtf} \
+        --outSAMmultNmax 1 \
+        --outMultimapperOrder Random \
+        --outSAMprimaryFlag AllBestScore \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignSJoverhangMin 8  \
+        --alignSJDBoverhangMin 1 \
+        --sjdbScore 1 \
+        --outFilterType Normal
+        """
+
+rule sort_bam:
+    input:
+        f"{output_dir}/aligned/{{sample}}.Aligned.out.bam"
+    output:
+        f"{output_dir}/aligned/{{sample}}_sorted.bam"
+    params:
+        job_name=f"{{sample}}_sort",
+        memory="select[mem>8] rusage[mem=8]"
+    shell:
+        "samtools sort {input} -o {output}"
+
+rule index_bam:
+    input:
+        f"{output_dir}/aligned/{{sample}}_sorted.bam"
+    output:
+        f"{output_dir}/aligned/{{sample}}_sorted.bam.bai"
+    params:
+        job_name=f"{{sample}}_index",
+        memory="select[mem>8] rusage[mem=8]"
+    shell:
+        "samtools index {input}"
+
+rule feature_count:
+    input:
+        bam=expand(f"{output_dir}/aligned/{{sample}}_sorted.bam", sample=samples),
+        gtf=gtf_file
+    output:
+        f"{output_dir}/counts/feature_counts_genes.tsv"
+    params:
+        job_name="feature_counts",
+        memory="select[mem>10] rusage[mem=10]",
+        threads=12
+    shell:
+        """
+        featureCounts -T {params.threads} -a {input.gtf} -o {output} -g gene_name {input.bam}
+        """
+
+rule bam_to_bigwigs:
+    input:
+        bam=f"{output_dir}/aligned/{{sample}}_sorted.bam",
+    output:
+        pos=f"{output_dir}/bigwigs/{{sample}}_pos.bw",
+        neg=f"{output_dir}/bigwigs/{{sample}}_neg.bw"
+    params:
+        job_name="bam_to_bigwigs",
+        memory="select[mem>50] rusage[mem=50]",
+        threads=12
+    shell:
+        """
+        bamCoverage -b {input.bam} -o {output.pos} \
+        --minMappingQuality 255 \
+        --normalizeUsing CPM \
+        --filterRNAstrand reverse
+
+        bamCoverage -b {input.bam} -o {output.neg} \
+        --minMappingQuality 255 \
+        --normalizeUsing CPM \
+        --filterRNAstrand forward
+        """
