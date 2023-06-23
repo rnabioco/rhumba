@@ -1,32 +1,31 @@
 # Configuration file for the rMATS Turbo snakemake pipeline
 
-# Sample names
+# Sample names and paths to BAM or FASTQ data files
 SAMPLES:
-    - "siCTL"
-    - "siCTL_DOX"
+    Hypoxia:
+        - test/hypo_1.bam
+        - test/hypo_2.bam
+        - test/hypo_3.bam
+    Normoxia:
+        - test/norm_1.bam
+        - test/norm_2.bam
+        - test/norm_3.bam
 
-# Paiwise comparisons
+# Paiwise comparisons to perform 
 COMPARISONS:
-    - "siCTL, siCTL_DOX"
-    - "siCTL_DOX, siCTL"
-
-# Path to the BAM files or FASTQ files
-# a comma separated list of file paths corresponding to each sample
-# maintain the same order as the sample list above
-DATA_PATHS:
-    #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_1/siCTL_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_2/siCTL_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_3/siCTL_3_sorted.bam"
-    #- "/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_1/siCTL_DOX_1_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_2/siCTL_DOX_2_sorted.bam,/beevol/home/kaufmanm/projects/jagannathan-srsf8/rnaseq-pipeline_outs/star/siCTL_DOX_3/siCTL_DOX_3_sorted.bam"
-    - "/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_3_sorted.bam"
-    - "/Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_1_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_2_sorted.bam, /Users/mkaufman/RBI/jagannathan-srsf8/rawdata/siCTL_DOX_3_sorted.bam"
-
+    Hypoxia_v_Normoxia:  
+        - "Hypoxia"
+        - "Normoxia"
+ 
 # Type of data: either "bam" for BAM files or "fastq" for FASTQ files.
 DATA_TYPE:
     "bam"
 
+# ---- required arguments passed to rMATS command ------
+
 # Path to GTF file, an annotation of genes and transcripts
 GTF_PATH:
-    #"/beevol/home/kaufmanm/projects/jagannathan-srsf8/refs/annotation/gencode.v37.annotation.gtf"
-    "/Users/mkaufman/RBI/jagannathan-srsf8/gtf/gencode.v37.annotation.gtf"
+    "test/hnrnph1.gtf"
 
 # Path to the STAR binary indices that contains the SA file. (ONLY IF USING FASTQ)
 STAR_INDEX:
@@ -34,32 +33,27 @@ STAR_INDEX:
 
 # Length of each read
 READ_LENGTH:
-    "150"
-
-# Type of read used in the analysis: either "paired" for paired-end data or "single" for single-end data.
-READ_TYPE:
-    "paired"
-
-# Library type. Use fr-firststrand or fr-secondstrand for strand-specific data. Default: fr-unstranded
-LIB_TYPE:
-    "fr-unstranded"
+    150
 
 # Number of threads to use for computation.
 THREADS:
-    "4"
+    1
+
+# ----- end required args ---- 
+
+# Additonal arguments to pass to rMATS command, supply as a single string
+OPT_RMATS_ARGS:
+    "--variable-read-length -t paired --libType fr-secondstrand --novelSS "
 
 # Path to store intermediate files
 TEMP_DIR:
-    "temp"
+    "test_results/temp"
 
 # Path to the output directory
 RESULT_PATH:
-    "results"
+    "test_results"
 
 # Container type, either singularity or docker
 CONTAINER_TYPE:
-    "docker"
+    "singularity"
 
-# Path to an LSF template.
-LSF_TEMPLATE:
-    src/lsf.template

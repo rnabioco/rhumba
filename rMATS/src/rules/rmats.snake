@@ -1,58 +1,62 @@
 # rules for the rmats turbo snakemake pipeline
 
+RMATS_CMD = "python rmats.py "
 if CONTAINER_TYPE == "singularity":
-    shell_cmd = """
-    singularity run --bind /data:/data /data/containers/rmats.sif \
-        --b1 {input.b1} \
-        --b2 {input.b2} \
-        --gtf {input.gtf} \
-        --od {output} \
-        --readLength 150 \
-        --tstat 1 \
-        --libType fr-unstranded \
-        --nthread {threads} \
-        --variable-read-length \
-        --novelSS \
-        --bi \
-        --statoff \
-        --tmp {params.tmp} \
-        --verbose
-    """
+    sif_path = os.path.join(TEMP_DIR, "rmats-turbo.sif")
+    RMATS_CMD = f"singularity run {sif_path} "
 elif CONTAINER_TYPE == "docker":
-    shell_cmd = """
-    docker run --rm -v --image rnabioco/rmats-turbo \
-    --gtf \
-    --b1 \
-    --b2 \
-    --nthreads {params.max_jobs} \
-    --od {params.results}
-        """
+    sys.exit("docker is unsupported at this point")
 
-# rule: rmats
+def get_rmats_input_config(wildcards):
+    " return list of config input files for a given comparison"
+    try:
+        comp_samples = COMPARISONS[wildcards.comparison]
+    except KeyError:
+        sys.exit(f"{wildcards.comparison} not found in COMPARISONS config")
+    
+    if len(comp_samples) != 2:
+        sys.exit("COMPARISIONS must contain 2 SAMPLES to compare")
+    try:
+        res = {
+          "b1" : SAMPLE_CONFIGS[comp_samples[0]],
+          "b2" : SAMPLE_CONFIGS[comp_samples[1]]
+          }
+    except:
+        smpls = " ".join(comp_samples)
+        sys.exit(f"issue finding configuration for samples {smpls}")
+    
+    return res
+
 rule rmats:
+    input:
+        unpack(get_rmats_input_config) 
     output:
-        expand(
-            "{result_path}/{comparison_names}_splicing_results.xlsx",
-            result_path=RESULT_PATH,
-            comparison_names=COMPARISON_NAMES,
-        ),
-        expand(
-            "{result_path}/{comparison_names}",
-            result_path=RESULT_PATH,
-            comparison_names=COMPARISON_NAMES,
-        ),
+        xlsx = "{results}/{comparison}/summary.txt"
     params:
-        job_name = "rmats_{wildcard.comparison_names}",
-        memory="select[mem>50] rusage[mem=50]",
-        max_jobs=THREADS,
-        lsf=LSF_TEMPLATE,
-        results=RESULT_PATH,
-        
-
-    threads: 1
+        job_name = "rmats_{comparison}",
+        memory ="select[mem>50] rusage[mem=50]",
+        od = "{results}/{comparison}",
+        other_args = OPT_RMATS_ARGS,
+        gtf = GTF_PATH,
+        read_len = READ_LENGTH,
+        tmp = TEMP_DIR,
+        star_index = STAR_INDEX
+    threads: THREADS
+    log: "{results}/logs/{comparison}"
     shell:
-        shell_cmd
+        """
+        {RMATS_CMD} \
+          --b1 {input.b1} \
+          --b2 {input.b2} \
+          --gtf {params.gtf} \
+          --od {params.od} \
+          --readLength {params.read_len} \
+          --nthread {threads} \
+          --tmp {params.tmp} \
+          {params.other_args} \
+          {params.star_index} \
 
+        """
 # usage: rmats.py [options]
 # optional arguments:
 #   -h, --help            show this help message and exit
