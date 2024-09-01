@@ -32,9 +32,9 @@ def process_bam(bam, og_bam, bedfile, editfile, bed_out, edit_out):
         
         # +/- 500kbp or ends of chrom
         
-        slop_start = max([0, start - 500000])
+        slop_start = max(0, start - 500000)
         slop_end = min(end + 500000, max_len)
-                
+        
         # query bam for interval +/- 500kbp
         # check for read name in this region (probably faster than
         # iterating over entire bam for each record)
@@ -50,7 +50,8 @@ def process_bam(bam, og_bam, bedfile, editfile, bed_out, edit_out):
             if bamread == read:
                 good_reads.add(read)
                 found_read = True
-        
+                break
+
         if not found_read:
           for alignment in og_bf_obj.fetch(reference = chrom, 
                                            start = slop_start,
@@ -60,6 +61,7 @@ def process_bam(bam, og_bam, bedfile, editfile, bed_out, edit_out):
               if bamread == read:
                   good_reads.add(read)
                   found_read = True
+                  break
         
         if found_read:
             bed.write(line)

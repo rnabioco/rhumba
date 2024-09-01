@@ -52,11 +52,11 @@ def check_qual(qual):
     quals = []
     for i in qual:
         quals.append(ord(i) - 33)
-
+    
     # drop lowest decile of qual scores
     decile = float(mquantiles(quals, prob = [0.1]))
-    
-    quals = [x for x in quals if x > decile]
+
+    quals = [x for x in quals if x >= decile]
 
     mean_qual = float(sum(quals)) / max(len(quals), 1)
     

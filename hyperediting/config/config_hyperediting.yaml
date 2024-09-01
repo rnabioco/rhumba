@@ -12,6 +12,10 @@ DATA:
 GENOME:
   "/path/to/genome.fa"
 
+  # path to 3-base bwa indices, will be generated if they do not exist
+BWA_IDX:
+  "/path/to/3letter/indices/bwa_idx"
+
 SIMPLE_REPEATS:
   "./dbases/unique_simple_repeats.txt"
 
@@ -32,7 +36,8 @@ FASTQ_SUFFIX:
 BAM_SUFFIX:
     "_sorted.bam"
 
-# allele combinations to process
+# allele combinations to process, in order, e.g. the first entry of pos_ref is the reference
+# and the first entry of pos_alt is the alternative allele
 pos_ref:
   - A
   - A
